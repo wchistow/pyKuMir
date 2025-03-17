@@ -16,7 +16,10 @@ def test_comment():
 
 def test_comment_ending():
     code = '| Это комментарий\nкоманда'
-    assert list(parse(code)) == [Token('CMD', 'команда', 1, 0)]
+    assert list(parse(code)) == [
+        Token('NEWLINE', '\n', 0, 17),
+        Token('CMD', 'команда', 1, 0)
+    ]
 
 
 def test_number():
@@ -27,6 +30,11 @@ def test_number():
 def test_skip():
     code = '\t   \t'
     assert list(parse(code)) == []
+
+
+def test_char():
+    code = "'a'"
+    assert list(parse(code)) == [Token('CHAR', 'a', 0, 0)]
 
 
 def test_string():

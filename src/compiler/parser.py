@@ -8,6 +8,7 @@ TOKENS = [
         ('START_COMMENT', r'\|'),
         ('NUMBER',        r'\d+(\.\d*)?'),                         # Число
         ('ASSIGNMENT',    r':='),                                  # Присваивание
+        ('CHAR',          r"'.?'"),                                # Одиночный символ
         ('ASSIGN',        r'[(:=)\(\)"<>:,\.]'),                   # Оператор
         ('START_BLOCK',   r'нач'),                                 # Начало блока
         ('END_BLOCK',     r'кон'),                                 # Конец блока
@@ -17,7 +18,8 @@ TOKENS = [
         ('SKIP',          r'[ \t]'),                               # Пробельный символ
         ('OTHER',         r'.'),                                   # Другое
 ]
-KEYWORDS = {'алг', 'арг', 'рез', 'аргрез', 'дано', 'надо', 'пока', 'если', 'то', 'для', 'от', 'до', 'нц', 'кц', 'ввод', 'вывод'}
+KEYWORDS = {'алг', 'арг', 'рез', 'аргрез', 'дано', 'надо', 'пока', 'если', 'то', 'для', 'от', 'до',
+            'нц', 'кц', 'ввод', 'вывод', 'да', 'нет'}
 TYPES = {'цел', 'вещ', 'сим', 'лит', 'лог', 'таб'}
 
 
@@ -45,7 +47,6 @@ def parse(text: str) -> Generator[Token | _BaseError]:
         kind = mo.lastgroup
         value = mo.group()
         column = mo.start() - line_start
-        print(kind, value)
 
         if state == _State.COMMENT:  # Сейчас комментарий
             if not kind == 'NEWLINE':
@@ -72,6 +73,7 @@ def parse(text: str) -> Generator[Token | _BaseError]:
                     cur_string += value
                 continue
             case 'NEWLINE':
+                yield Token('NEWLINE', value, line, column)
                 line += 1
                 line_start = mo.end()
                 state = _State.WAIT
@@ -81,6 +83,9 @@ def parse(text: str) -> Generator[Token | _BaseError]:
                     kind = 'KEYWORD'
                 elif value in TYPES:
                     kind = 'TYPE'
+            case 'CHAR':
+                yield Token('CHAR', value[1:-1], line, column)
+                continue
             case 'NUMBER':
                 value = float(value) if '.' in value else int(value)
             case 'SKIP':
