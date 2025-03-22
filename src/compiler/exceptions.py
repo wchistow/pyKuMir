@@ -1,7 +1,8 @@
-from typing import NamedTuple
+from dataclasses import dataclass
 
 
-class _BaseError(NamedTuple):
+@dataclass
+class _BaseError:
     line: int     # Номер строки
     column: int   # Номер символа
     value: str    # Выражение, на котором ошибка возникла
