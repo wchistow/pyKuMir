@@ -50,7 +50,9 @@ class TokensToPythonCodeTranslater:
                 case 'CMD':
                     self.process_cmd(tok)
                 case 'NEWLINE':
-                    self.process_newline(tok)
+                    err = self.process_newline(tok)
+                    if err is not None:
+                        return err
                 case 'TYPE':
                     err = self.process_type(tok)
                     if err is not None:
@@ -58,7 +60,9 @@ class TokensToPythonCodeTranslater:
 
         if self.state == _State.ASSIGNMENT_VALUE and \
                     not self.vas.cur_stmt.strip().endswith('='):  # после знака := есть выражение
-            self.code.append(self.vas.cur_stmt)
+            err = self.add_var_def_to_code(tok)
+            if err is not None:
+                return err
         elif self.state != _State.WAIT:
             return SyntaxException(tok.line, tok.column, tok.value, 'неверный синтаксис')
         
@@ -72,25 +76,44 @@ class TokensToPythonCodeTranslater:
             self.vas.cur_stmt += ' = '
             self.state = _State.ASSIGNMENT_VALUE
     
-    def process_assignment_value(self, tok: Token):
+    def process_assignment_value(self, tok: Token) -> SyntaxException | None:
         if tok.typename in {'ASSIGN', 'NUMBER', 'CHAR', 'STR', 'CMD', 'OP'}:
             self.vas.cur_stmt += str(tok.value)
         elif tok.typename != 'NEWLINE':
             return SyntaxException(tok.line, tok.column, tok.value, 'неверный синтаксис')
-    
+
+    def validate_var_expr(self, var_def: str) -> SyntaxException | None:
+        expr = var_def.split('=')[-1].strip()
+        if expr.count('(') != expr.count(')'):
+            return SyntaxException(None, None, expr[-1], 'неверный синтаксис')
+        elif expr.endswith(('+', '-', '*', '/')):
+            return SyntaxException(None, None, expr[-1], 'неверный синтаксис')
+        elif (expr.find('+)'), expr.find('-)'), expr.find('*)'), expr.find('/)')) != (-1, -1, -1, -1):
+            return SyntaxException(None, None, expr[-1], 'неверный синтаксис')
+
+    def add_var_def_to_code(self, cur_tok: Token) -> SyntaxException | None:
+        err = self.validate_var_expr(self.vas.cur_stmt)
+        if err is not None:
+            err.line = cur_tok.line
+            err.column = cur_tok.column
+            return err
+        self.code.append(self.vas.cur_stmt)
+
     def process_cmd(self, tok: Token):
         if self.state == _State.ASSIGNMENT_NAME:
             self.vas.cur_stmt = f'{tok.value}: {self.vas.cur_var_type}'
             self.vas.cur_var_type = ''
             self.state = _State.ASSIGNMENT_SIGN
     
-    def process_newline(self, tok: Token):
+    def process_newline(self, tok: Token) -> SyntaxException | None:
         if self.state == _State.ASSIGNMENT_VALUE:
-            self.code.append(self.vas.cur_stmt)
+            err = self.add_var_def_to_code(tok)
+            if err is not None:
+                return err
             self.vas.cur_stmt = None
             self.state = _State.WAIT
     
-    def process_type(self, tok: Token):
+    def process_type(self, tok: Token) -> SyntaxException | None:
         if self.state == _State.WAIT:
             self.vas.cur_var_type = TYPES_KEYWORDS[tok.value]
             self.state = _State.ASSIGNMENT_NAME
