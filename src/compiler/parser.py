@@ -19,7 +19,7 @@ TOKENS = [
         ('OTHER',         r'.'),                                   # Другое
 ]
 KEYWORDS = {'алг', 'арг', 'рез', 'аргрез', 'дано', 'надо', 'пока', 'если', 'то', 'для', 'от', 'до',
-            'нц', 'кц', 'ввод', 'вывод', 'да', 'нет'}
+            'нц', 'кц', 'ввод', 'вывод', 'да', 'нет', 'использовать'}
 TYPES = {'цел', 'вещ', 'сим', 'лит', 'лог', 'таб'}
 
 
@@ -36,67 +36,76 @@ class _State(Enum):
     STRING = auto()
 
 
-def parse(text: str) -> Generator[Token | _BaseError]:
-    tok_regex = '|'.join('(?P<%s>%s)' % pair for pair in TOKENS)
-    line = 0
-    column = 0
-    line_start = 0  # Начало текущей строки кода (в символах от начала программы)
-    cur_string = ''  # Текущая строка (если есть)
-    state = _State.WAIT
-    for mo in re.finditer(tok_regex, text):
-        kind = mo.lastgroup
-        value = mo.group()
-        column = mo.start() - line_start
+class Parser:
+    def __init__(self):
+        self.line = 0
+        self.column = 0
+        self.line_start = 0  # Начало текущей строки кода (в символах от начала программы)
+        self.cur_string = ''  # Текущая строка (если есть)
+        self.state = _State.WAIT
+        self.cur_tok_kind = None
+        self.cur_tok_value = None
+    
+    def reset(self):
+        self.__init__()
 
-        if state == _State.COMMENT:  # Сейчас комментарий
-            if not kind == 'NEWLINE':
-                continue
+    def parse(self, text: str) -> Generator[Token | _BaseError]:
+        tok_regex = '|'.join('(?P<%s>%s)' % pair for pair in TOKENS)
+        for mo in re.finditer(tok_regex, text):
+            self.cur_tok_kind = mo.lastgroup
+            self.cur_tok_value = mo.group()
+            self.column = mo.start() - self.line_start
 
-        if value == '"':
-            if state == _State.STRING:  # Строка закончилась
-                state = _State.WAIT
-                yield Token('STR', cur_string, line, column)
-                cur_string = ''
-            else:  # Строка началась
-                state = _State.STRING
-            continue
-
-        if state == _State.STRING:  # Сейчас строка
-            cur_string += value
-            continue
-
-        match kind:
-            case 'START_COMMENT':
-                if state != _State.STRING:  # Символ "|" не находится в строке.
-                    state = _State.COMMENT
-                else:
-                    cur_string += value
-                continue
-            case 'NEWLINE':
-                yield Token('NEWLINE', value, line, column)
-                line += 1
-                line_start = mo.end()
-                state = _State.WAIT
-                continue
-            case 'CMD':
-                if value in KEYWORDS:
-                    kind = 'KEYWORD'
-                elif value in TYPES:
-                    kind = 'TYPE'
-            case 'CHAR':
-                yield Token('CHAR', value[1:-1], line, column)
-                continue
-            case 'NUMBER':
-                value = float(value) if '.' in value else int(value)
-            case 'SKIP':
-                continue
-            case 'OTHER':
-                if state == _State.STRING:
-                    cur_string += value
-                else:
-                    yield SyntaxException(line, column, value, f'неизвестный символ: {value!r}')
+            if self.state == _State.COMMENT:  # Сейчас комментарий
+                if not self.cur_tok_kind == 'NEWLINE':
                     continue
-        yield Token(kind, value, line, column)
 
-    if state == _State.STRING:  # До конца кода продолжается строка.
-        yield SyntaxException(line, len(text) - 1, text[-1], 'незакрытая кавычка')
+            if self.cur_tok_value == '"':
+                if self.state == _State.STRING:  # Строка закончилась
+                    self.state = _State.WAIT
+                    yield Token('STR', self.cur_string, self.line, self.column)
+                    self.cur_string = ''
+                else:  # Строка началась
+                    self.state = _State.STRING
+                continue
+
+            if self.state == _State.STRING:  # Сейчас строка
+                self.cur_string += self.cur_tok_value
+                continue
+
+            match self.cur_tok_kind:
+                case 'START_COMMENT':
+                    if self.state != _State.STRING:  # Символ "|" не находится в строке.
+                        self.state = _State.COMMENT
+                    else:
+                        self.cur_string += self.cur_tok_value
+                    continue
+                case 'NEWLINE':
+                    yield Token('NEWLINE', self.cur_tok_value, self.line, self.column)
+                    self.line += 1
+                    self.line_start = mo.end()
+                    self.state = _State.WAIT
+                    continue
+                case 'CMD':
+                    if self.cur_tok_value in KEYWORDS:
+                        self.cur_tok_kind = 'KEYWORD'
+                    elif self.cur_tok_value in TYPES:
+                        self.cur_tok_kind = 'TYPE'
+                case 'CHAR':
+                    yield Token('CHAR', self.cur_tok_value[1:-1], self.line, self.column)
+                    continue
+                case 'NUMBER':
+                    self.cur_tok_value = float(self.cur_tok_value) if '.' in self.cur_tok_value else int(self.cur_tok_value)
+                case 'SKIP':
+                    continue
+                case 'OTHER':
+                    if self.state == _State.STRING:
+                        self.cur_string += self.cur_tok_value
+                    else:
+                        yield SyntaxException(self.line, self.column, self.cur_tok_value,
+                                              f'неизвестный символ: {self.cur_tok_value!r}')
+                        continue
+            yield Token(self.cur_tok_kind, self.cur_tok_value, self.line, self.column)
+
+        if self.state == _State.STRING:  # До конца кода продолжается строка.
+            yield SyntaxException(self.line, len(text) - 1, text[-1], 'незакрытая кавычка')
