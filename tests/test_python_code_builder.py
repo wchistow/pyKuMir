@@ -72,3 +72,15 @@ def test_invalid_ops_before_bracket_in_var_expr():
     code = 'цел а := 1+2*(3+)'
     with pytest.raises(SyntaxException):
         translater.translate(parser.parse(code))
+
+
+def test_executor():
+    code = 'использовать Робот'
+    expected = 'import Робот'
+    assert translater.translate(parser.parse(code)) == expected
+
+
+def test_invalid_executor():
+    code = 'использовать Робота'
+    with pytest.raises(SyntaxException):
+        translater.translate(parser.parse(code))

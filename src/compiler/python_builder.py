@@ -11,6 +11,7 @@ TYPES_KEYWORDS = {
     'сим': 'chr',
     'лог': 'bool',
 }
+EXECUTOR_NAMES = {'Робот', 'Чертёжник', 'Кузнечик', 'Вертун', 'Водолей', 'Рисователь', 'Черепаха'}
 
 
 class _VariableAssignmentState:
@@ -23,6 +24,7 @@ class _State(Enum):
     ASSIGNMENT_NAME = auto()  # ждём имя переменной
     ASSIGNMENT_SIGN = auto()  # ждем :=
     ASSIGNMENT_VALUE = auto()  # ждём значение переменной
+    EXECUTOR_NAME = auto()  # ждём имя после ключегого слова "использовать"
 
 
 class TokensToPythonCodeTranslater:
@@ -36,8 +38,11 @@ class TokensToPythonCodeTranslater:
 
     def translate(self, tokens: Iterable[Token]) -> NoReturn | str:
         for tok in tokens:
-            if self.state == _State.ASSIGNMENT_VALUE:
-                self.process_assignment_value(tok)
+            match self.state:
+                case _State.ASSIGNMENT_VALUE:
+                    self.process_assignment_value(tok)
+                case _State.EXECUTOR_NAME:
+                    self.process_executor_name(tok)
 
             match tok.typename:
                 case 'ASSIGNMENT':
@@ -48,6 +53,8 @@ class TokensToPythonCodeTranslater:
                     self.process_newline(tok)
                 case 'TYPE':
                     self.process_type(tok)
+                case 'KEYWORD':
+                    self.process_keyword(tok)
 
         if self.state == _State.ASSIGNMENT_VALUE and \
                     not self.vas.cur_stmt.strip().endswith('='):  # после знака := есть выражение
@@ -64,6 +71,13 @@ class TokensToPythonCodeTranslater:
         else:
             self.vas.cur_stmt += ' = '
             self.state = _State.ASSIGNMENT_VALUE
+
+    def process_executor_name(self, tok: Token) -> NoReturn | None:
+        if tok.value in EXECUTOR_NAMES:
+            self.code.append(f'import {tok.value}')
+            self.state = _State.WAIT
+        else:
+            raise SyntaxException(tok.line, tok.column, tok.value, 'нет такого исполнителя')
 
     def process_assignment_value(self, tok: Token) -> NoReturn | None:
         if tok.typename in {'ASSIGN', 'NUMBER', 'CHAR', 'STR', 'CMD', 'OP'}:
@@ -111,6 +125,15 @@ class TokensToPythonCodeTranslater:
         else:
             raise SyntaxException(tok.line, tok.column, tok.value,
                                    f'неправильное использование ключевого слова {tok.value!r}')
+    
+    def process_keyword(self, tok: Token) -> NoReturn | None:
+        match tok.value:
+            case 'использовать':
+                if self.state == _State.WAIT:
+                    self.state = _State.EXECUTOR_NAME
+                else:
+                    raise SyntaxException(tok.line, tok.column, tok.value,
+                                          'неправильное использование ключевого слова "использовать"')
 
 
 if __name__ == '__main__':
