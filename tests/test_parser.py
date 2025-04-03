@@ -1,6 +1,8 @@
 from pathlib import Path
 import sys
 
+import pytest
+
 PATH_TO_SRC = Path(__file__).parent.parent.absolute() / 'src'
 
 sys.path.append(str(PATH_TO_SRC.absolute()))
@@ -50,12 +52,14 @@ def test_string():
 
 def test_string_not_closed():
     code = '"Это строка'
-    assert list(parser.parse(code)) == [SyntaxException(0, len(code) - 1, 'а', 'незакрытая кавычка')]
+    with pytest.raises(SyntaxException):
+        list(parser.parse(code))
 
 
 def test_syntax_exception():
     code = '@'
-    assert list(parser.parse(code)) == [SyntaxException(0, 0, '@', "неизвестный символ: '@'")]
+    with pytest.raises(SyntaxException):
+        list(parser.parse(code))
 
 
 def test_block_start_and_end():

@@ -1,8 +1,8 @@
 from enum import auto, Enum
 import re
-from typing import Any, Generator, NamedTuple
+from typing import Any, Generator, NamedTuple, NoReturn
 
-from .exceptions import _BaseError, SyntaxException
+from .exceptions import SyntaxException
 
 TOKENS = [
         ('START_COMMENT', r'\|'),
@@ -18,8 +18,8 @@ TOKENS = [
         ('SKIP',          r'[ \t]'),                               # Пробельный символ
         ('OTHER',         r'.'),                                   # Другое
 ]
-KEYWORDS = {'алг', 'арг', 'рез', 'аргрез', 'дано', 'надо', 'пока', 'если', 'то', 'для', 'от', 'до',
-            'нц', 'кц', 'ввод', 'вывод', 'да', 'нет', 'использовать'}
+KEYWORDS = {'алг', 'нач', 'кон', 'арг', 'рез', 'аргрез', 'дано', 'надо', 'пока', 'если',
+            'то', 'для', 'от', 'до', 'нц', 'кц', 'ввод', 'вывод', 'да', 'нет', 'использовать'}
 TYPES = {'цел', 'вещ', 'сим', 'лит', 'лог', 'таб'}
 
 
@@ -49,12 +49,13 @@ class Parser:
     def reset(self):
         self.__init__()
 
-    def parse(self, text: str) -> Generator[Token | _BaseError]:
+    def parse(self, text: str) -> Generator[Token] | NoReturn:
         tok_regex = '|'.join('(?P<%s>%s)' % pair for pair in TOKENS)
         for mo in re.finditer(tok_regex, text):
             self.cur_tok_kind = mo.lastgroup
             self.cur_tok_value = mo.group()
             self.column = mo.start() - self.line_start
+            print(mo.group())
 
             if self.state == _State.COMMENT:  # Сейчас комментарий
                 if not self.cur_tok_kind == 'NEWLINE':
@@ -102,10 +103,9 @@ class Parser:
                     if self.state == _State.STRING:
                         self.cur_string += self.cur_tok_value
                     else:
-                        yield SyntaxException(self.line, self.column, self.cur_tok_value,
+                        raise SyntaxException(self.line, self.column, self.cur_tok_value,
                                               f'неизвестный символ: {self.cur_tok_value!r}')
-                        continue
             yield Token(self.cur_tok_kind, self.cur_tok_value, self.line, self.column)
 
         if self.state == _State.STRING:  # До конца кода продолжается строка.
-            yield SyntaxException(self.line, len(text) - 1, text[-1], 'незакрытая кавычка')
+            raise SyntaxException(self.line, len(text) - 1, text[-1], 'незакрытая кавычка')

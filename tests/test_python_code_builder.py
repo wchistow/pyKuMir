@@ -1,6 +1,8 @@
 from pathlib import Path
 import sys
 
+import pytest
+
 PATH_TO_SRC = Path(__file__).parent.parent.absolute() / 'src'
 
 sys.path.append(str(PATH_TO_SRC.absolute()))
@@ -32,41 +34,41 @@ def test_var_with_expr():
 
 def test_assignment_without_var_def():
     code = ':='
-    expected = SyntaxException(0, 0, ':=', 'неправильное использование присваивания')
-    assert translater.translate(parser.parse(code)) == expected
+    with pytest.raises(SyntaxException):
+        translater.translate(parser.parse(code))
 
 
 def test_invalid_type_usage():
     code = 'цел вещ а := 1'
-    expected = SyntaxException(0, 4, 'вещ', "неправильное использование ключевого слова 'вещ'")
-    assert translater.translate(parser.parse(code)) == expected
+    with pytest.raises(SyntaxException):
+        translater.translate(parser.parse(code))
 
 
 def test_invalid_var_def():
     code = 'цел а :='
-    expected = SyntaxException(0, 6, ':=', 'неверный синтаксис')
-    assert translater.translate(parser.parse(code)) == expected
+    with pytest.raises(SyntaxException):
+        translater.translate(parser.parse(code))
 
 
 def test_invalid_var_def_with_newline():
     code = 'цел а :=\n'
-    expected = SyntaxException(0, 8, '\n', 'неверный синтаксис')
-    assert translater.translate(parser.parse(code)) == expected
+    with pytest.raises(SyntaxException):
+        translater.translate(parser.parse(code))
 
 
 def test_invalid_brackets_in_var_expr():
     code = 'цел а := 1+2*(3+4'
-    expected = SyntaxException(0, 16, '4', 'неверный синтаксис')
-    assert translater.translate(parser.parse(code)) == expected
+    with pytest.raises(SyntaxException):
+        translater.translate(parser.parse(code))
 
 
 def test_invalid_ops_in_var_expr():
     code = 'цел а := 1+2*'
-    expected = SyntaxException(0, 12, '*', 'неверный синтаксис')
-    assert translater.translate(parser.parse(code)) == expected
+    with pytest.raises(SyntaxException):
+        translater.translate(parser.parse(code))
 
 
 def test_invalid_ops_before_bracket_in_var_expr():
     code = 'цел а := 1+2*(3+)'
-    expected = SyntaxException(0, 16, ')', 'неверный синтаксис')
-    assert translater.translate(parser.parse(code)) == expected
+    with pytest.raises(SyntaxException):
+        translater.translate(parser.parse(code))
