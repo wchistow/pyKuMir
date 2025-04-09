@@ -1,10 +1,11 @@
+"""Строит AST с помощью lark."""
 import sys
 from typing import Union
 
 from lark import Lark, ast_utils, Transformer, v_args, Tree, Token
 
-from ast_classes import SetVar, Value, BinOp, StoreVar, Op, Expression
-from exceptions import SyntaxException
+from .ast_classes import SetVar, Value, BinOp, StoreVar, Op, Expression
+from .exceptions import SyntaxException
 
 this_module = sys.modules[__name__]
 
@@ -22,6 +23,14 @@ class ToAst(Transformer):
 
 
 def build_ast(code: str) -> Tree:
+    """
+    Строит AST с помощью lark.
+
+    Args:
+        code (str): исходный код программы на алгоритмическом языке
+    Returns:
+        Tree: AST
+    """
     parser = Lark.open('gram.lark', rel_to=__file__, parser='lalr')
 
     transformer = ast_utils.create_transformer(this_module, ToAst())

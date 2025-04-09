@@ -26,8 +26,8 @@ class BinOp(_Ast):
     op: str
     right: Any
 
+# Классы, используемые не в AST, а в `build_ast._improve`:
 
-# Классы, используемые не в AST, а в `build_ast._improve`
 @dataclass
 class StoreVar:
     meta: Meta
