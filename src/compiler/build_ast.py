@@ -3,9 +3,11 @@ import sys
 from typing import Union
 
 from lark import Lark, ast_utils, Transformer, v_args, Tree, Token
+from lark.exceptions import UnexpectedInput
 
-from .ast_classes import SetVar, Value, BinOp, StoreVar, Op, Expression
-from .exceptions import SyntaxException
+from ast_classes import SetVar, Value, BinOp, StoreVar, Op, Expression
+from constants import VALUE_TYPE
+from exceptions import SyntaxException
 
 this_module = sys.modules[__name__]
 
@@ -14,8 +16,18 @@ class ToAst(Transformer):
     def STRING(self, s: str) -> str:
         return s[1:-1]
 
-    def NUMBER(self, n: str) -> int:
-        return int(n)
+    def NUMBER(self, n: str) -> Union[int, float]:
+        if '.' in n:
+            return float(n)
+        else:
+            return int(n)
+
+    def NAME(self, n: str) -> Union[bool, str]:
+        if n == 'да':
+            return True
+        elif n == 'нет':
+            return False
+        return n
 
     @v_args(inline=True)
     def start(self, x):
@@ -31,11 +43,16 @@ def build_ast(code: str) -> Tree:
     Returns:
         Tree: AST
     """
-    parser = Lark.open('gram.lark', rel_to=__file__, parser='lalr')
 
+    parser = Lark.open('gram.lark', rel_to=__file__, propagate_positions=True, parser='lalr')
     transformer = ast_utils.create_transformer(this_module, ToAst())
-    tree = transformer.transform(parser.parse(code))
-    return _improve(tree)
+
+    try:
+        tree = transformer.transform(parser.parse(code))
+    except UnexpectedInput as err:
+        raise SyntaxException(err.line, err.token, err.expected) from None
+    else:
+        return _improve(tree)
 
 
 def _improve(tree: Tree) -> Tree:
@@ -61,8 +78,8 @@ def _get_priority(op: str) -> int:
         return 0
 
 
-def _to_reverse_polish(expr: Union[list, Tree]) -> tuple[Union[str, int, Op]]:
-    notation: list[Union[str, int, Op]] = []
+def _to_reverse_polish(expr: Union[list, Tree]) -> tuple[Union[VALUE_TYPE, Op]]:
+    notation: list[Union[VALUE_TYPE, Op]] = []
     operator_stack: list[Token] = []
     in_parentheses = False
     indent = 0
@@ -93,8 +110,6 @@ def _to_reverse_polish(expr: Union[list, Tree]) -> tuple[Union[str, int, Op]]:
                 if token == '(':
                     in_parentheses = True
                 else:
-                    if token == ')':
-                        raise SyntaxException('Слишком много закрывающихся скобок')
                     while True:
                         if not operator_stack:
                             break
@@ -103,8 +118,6 @@ def _to_reverse_polish(expr: Union[list, Tree]) -> tuple[Union[str, int, Op]]:
                         else:
                             break
                     operator_stack.append(token)
-    if in_parentheses:
-        raise SyntaxException('Слишком мало закрывающихся скобок')
     for op in operator_stack[::-1]:
         notation.append(Op(op.value))
     return tuple(notation)

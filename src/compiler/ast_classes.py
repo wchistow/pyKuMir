@@ -4,6 +4,8 @@ from typing import Any, Optional, Union
 from lark import ast_utils, Token, Tree
 from lark.tree import Meta
 
+from constants import VALUE_TYPE
+
 
 class _Ast(ast_utils.Ast): ...
 
@@ -41,4 +43,4 @@ class Op:
 
 @dataclass
 class Expression:
-    expr: tuple[Union[str, int, Op]]
+    expr: tuple[Union[VALUE_TYPE, Op]]

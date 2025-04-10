@@ -6,7 +6,6 @@ NUMBER: /\d+(\.\d*)?/
 STRING: /".*"/
 CHAR: "'" /.?/ "'"
 NAME: /[A-Za-zА-Яа-я_][A-Za-zА-Яа-я_0-9]*/
-BOOL: "да" | "нет"
 OP: "+" | "-" | "*" | "/" | "=" | "<" | ">" | "," | "." | ">=" | "<=" | "<>"
 COMMENT: "|" /[^\n]/*
 BRACKET_OPEN: "("
@@ -19,7 +18,7 @@ expr: value | bin_op | BRACKET_OPEN expr BRACKET_CLOSE
 
 set_var: TYPE var_name (":=" expr)?
 var_name: NAME ("," NAME)*
-value: NUMBER | STRING | CHAR | NAME | BOOL
+value: NUMBER | STRING | CHAR | NAME
 
 %import common.WS
 %import common.NEWLINE
