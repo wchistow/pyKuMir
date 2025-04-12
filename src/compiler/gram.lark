@@ -1,6 +1,6 @@
 start: code_block
-code_block: statement ((NEWLINE | ";") statement)*
-statement: set_var
+code_block: statement ((NEWLINE | ";") statement)* (NEWLINE | ";")?
+statement: store_var | declaring_var
 
 NUMBER: /\d+(\.\d*)?/
 STRING: /".*"/
@@ -16,7 +16,8 @@ TYPE: "цел" | "вещ" | "лог" | "лит" | "сим" | "цел таб" | "
 bin_op: expr OP expr
 expr: value | bin_op | BRACKET_OPEN expr BRACKET_CLOSE
 
-set_var: TYPE var_name (":=" expr)?
+declaring_var: TYPE var_name (":=" expr)?
+store_var: /[^(TYPE)NAME]/ ":=" expr
 var_name: NAME ("," NAME)*
 value: NUMBER | STRING | CHAR | NAME
 

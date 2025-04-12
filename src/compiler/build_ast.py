@@ -5,9 +5,9 @@ from typing import Union
 from lark import Lark, ast_utils, Transformer, v_args, Tree, Token
 from lark.exceptions import UnexpectedInput
 
-from ast_classes import SetVar, Value, BinOp, StoreVar, Op, Expression
-from constants import VALUE_TYPE
-from exceptions import SyntaxException
+from .ast_classes import DeclaringVar, Value, BinOp, StoreVar, Op, Expression
+from .constants import ValueType
+from .exceptions import SyntaxException
 
 this_module = sys.modules[__name__]
 
@@ -50,7 +50,7 @@ def build_ast(code: str) -> Tree:
     try:
         tree = transformer.transform(parser.parse(code))
     except UnexpectedInput as err:
-        raise SyntaxException(err.line, err.token, err.expected) from None
+        raise SyntaxException(err.line, token=err.token, expected=err.expected) from None
     else:
         return _improve(tree)
 
@@ -58,12 +58,19 @@ def build_ast(code: str) -> Tree:
 def _improve(tree: Tree) -> Tree:
     for t in tree.iter_subtrees():
         for c in t.children:
-            if isinstance(c, SetVar):
+            if isinstance(c, DeclaringVar):
                 sv = StoreVar(
                     c.meta,
                     c.typename.value,
                     tuple(name.value for name in c.names.children),
                     Expression(_to_reverse_polish(c.value.children[0])) if c.value is not None else None)
+                t.children[t.children.index(c)] = sv
+            if isinstance(c, Tree) and c.data.value == 'store_var':
+                sv = StoreVar(
+                    c.meta,
+                    None,
+                    tuple(c.children[0]),
+                    Expression(_to_reverse_polish(c.children[1].children)) if c.children[1] is not None else None)
                 t.children[t.children.index(c)] = sv
     return tree
 
@@ -78,14 +85,16 @@ def _get_priority(op: str) -> int:
         return 0
 
 
-def _to_reverse_polish(expr: Union[list, Tree]) -> tuple[Union[VALUE_TYPE, Op]]:
-    notation: list[Union[VALUE_TYPE, Op]] = []
+def _to_reverse_polish(expr: Union[list, Tree]) -> tuple[Union[ValueType, Op]]:
+    notation: list[Union[ValueType, Op]] = []
     operator_stack: list[Token] = []
     in_parentheses = False
     indent = 0
     code_in_brackets = []
     if isinstance(expr, list):
-        tokens = expr
+        tokens = []
+        for tok in expr:
+            tokens.extend(_get_all_toks(tok))
     else:
         tokens = _get_all_toks(expr)
     for token in tokens:

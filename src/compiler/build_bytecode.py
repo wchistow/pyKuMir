@@ -1,10 +1,9 @@
-from dataclasses import dataclass
+from typing import NamedTuple
 
-from ast_classes import StoreVar
+from .ast_classes import StoreVar
 
 
-@dataclass
-class Bytecode:
+class Bytecode(NamedTuple):
     start_line: int
     command: str
     args: dict
@@ -23,7 +22,7 @@ def build_bytecode(ast_tree) -> list[Bytecode]:
                         {
                             'type': stmt.typename,
                             'names': stmt.names,
-                            'value': stmt.value.expr
+                            'value': stmt.value.expr if stmt.value else None
                         }
                     )
                 )

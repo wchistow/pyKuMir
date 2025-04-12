@@ -4,7 +4,7 @@ from typing import Any, Optional, Union
 from lark import ast_utils, Token, Tree
 from lark.tree import Meta
 
-from constants import VALUE_TYPE
+from .constants import ValueType
 
 
 class _Ast(ast_utils.Ast): ...
@@ -12,10 +12,16 @@ class _Ast(ast_utils.Ast): ...
 class _Statement(_Ast): ...
 
 @dataclass
-class SetVar(_Statement, ast_utils.WithMeta):
+class DeclaringVar(_Statement, ast_utils.WithMeta):
     meta: Meta
-    typename: Token
-    names: Tree
+    typename: Optional[Token] = None  # `None` - если переменая уже объявлена
+    names: Tree = None  # не может быть `None`. Это нужно только из-за того, что у `typename` есть значение по умолчанию
+    value: Optional['Value'] = None
+
+@dataclass
+class StoreVal(_Statement, ast_utils.WithMeta):
+    meta: Meta
+    name: Tree
     value: Optional['Value'] = None
 
 @dataclass
@@ -33,7 +39,7 @@ class BinOp(_Ast):
 @dataclass
 class StoreVar:
     meta: Meta
-    typename: str
+    typename: Optional[str]  # `None` - если переменная уже объявлена (`а := 5`)
     names: tuple[str]
     value: Optional['Expression'] = None
 
@@ -43,4 +49,4 @@ class Op:
 
 @dataclass
 class Expression:
-    expr: tuple[Union[VALUE_TYPE, Op]]
+    expr: tuple[Union[ValueType, Op]]
