@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Optional, Union
+from typing import Any, Optional
 
 from lark import ast_utils, Token, Tree
 from lark.tree import Meta
@@ -14,7 +14,7 @@ class _Statement(_Ast): ...
 @dataclass
 class DeclaringVar(_Statement, ast_utils.WithMeta):
     meta: Meta
-    typename: Optional[Token] = None  # `None` - если переменая уже объявлена
+    typename: Token | None = None  # `None` - если переменая уже объявлена
     names: Tree = None  # не может быть `None`. Это нужно только из-за того, что у `typename` есть значение по умолчанию
     value: Optional['Value'] = None
 
@@ -39,7 +39,7 @@ class BinOp(_Ast):
 @dataclass
 class StoreVar:
     meta: Meta
-    typename: Optional[str]  # `None` - если переменная уже объявлена (`а := 5`)
+    typename: str | None  # `None` - если переменная уже объявлена (`а := 5`)
     names: tuple[str]
     value: Optional['Expression'] = None
 
@@ -49,4 +49,4 @@ class Op:
 
 @dataclass
 class Expression:
-    expr: tuple[Union[ValueType, Op]]
+    expr: tuple[ValueType | Op]

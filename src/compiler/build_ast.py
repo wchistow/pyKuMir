@@ -1,6 +1,5 @@
 """Строит AST с помощью lark."""
 import sys
-from typing import Union
 
 from lark import Lark, ast_utils, Transformer, v_args, Tree, Token
 from lark.exceptions import UnexpectedInput
@@ -13,16 +12,16 @@ this_module = sys.modules[__name__]
 
 
 class ToAst(Transformer):
-    def STRING(self, s: str) -> str:
+    def STRING(self, s: Token) -> str:
         return s[1:-1]
 
-    def NUMBER(self, n: str) -> Union[int, float]:
+    def NUMBER(self, n: Token) -> int | float:
         if '.' in n:
             return float(n)
         else:
             return int(n)
 
-    def NAME(self, n: str) -> Union[bool, str]:
+    def NAME(self, n: Token) -> bool | Token:
         if n == 'да':
             return True
         elif n == 'нет':
@@ -77,16 +76,16 @@ def _improve(tree: Tree) -> Tree:
 
 def _get_priority(op: str) -> int:
     """Возвращает приоритет оператора."""
-    if op in ('+', '-'):
-        return 0
-    elif op in ('*', '/'):
-        return 1
-    else:
-        return 0
+    match op:
+        case '+' | '-':
+            return 0
+        case '*' | '/':
+            return 1
+    return 0
 
 
-def _to_reverse_polish(expr: Union[list, Tree]) -> tuple[Union[ValueType, Op]]:
-    notation: list[Union[ValueType, Op]] = []
+def _to_reverse_polish(expr: list | Tree) -> tuple[ValueType | Op]:
+    notation: list[ValueType | Op] = []
     operator_stack: list[Token] = []
     in_parentheses = False
     indent = 0
@@ -113,37 +112,39 @@ def _to_reverse_polish(expr: Union[list, Tree]) -> tuple[Union[ValueType, Op]]:
                     indent -= 1
                     code_in_brackets.append(token)
         else:
-            if isinstance(token, Value):
-                notation.append(token.value)
-            elif isinstance(token, Token):
-                if token == '(':
-                    in_parentheses = True
-                else:
-                    while True:
-                        if not operator_stack:
-                            break
-                        if _get_priority(operator_stack[-1]) >= _get_priority(token.value):
-                            notation.append(Op(operator_stack.pop().value))
-                        else:
-                            break
-                    operator_stack.append(token)
+            match token:
+                case Value():
+                    notation.append(token.value)
+                case Token():
+                    if token == '(':
+                        in_parentheses = True
+                    else:
+                        while True:
+                            if not operator_stack:
+                                break
+                            if _get_priority(operator_stack[-1]) >= _get_priority(token.value):
+                                notation.append(Op(operator_stack.pop().value))
+                            else:
+                                break
+                        operator_stack.append(token)
     for op in operator_stack[::-1]:
         notation.append(Op(op.value))
     return tuple(notation)
 
 
 def _get_all_toks(expr) -> list:
-    if isinstance(expr, BinOp):
-        return [*_get_all_toks(expr.left), expr.op, *_get_all_toks(expr.right)]
-    elif isinstance(expr, Value):
-        return [expr]
-    elif isinstance(expr, Tree):
-        res = []
-        for c in expr.children:
-            res.extend(_get_all_toks(c))
-        return res
-    else:
-        return [expr]
+    match expr:
+        case BinOp():
+            return [*_get_all_toks(expr.left), expr.op, *_get_all_toks(expr.right)]
+        case Value():
+            return [expr]
+        case Tree():
+            res = []
+            for c in expr.children:
+                res.extend(_get_all_toks(c))
+            return res
+        case _:
+            return [expr]
 
 
 if __name__ == '__main__':

@@ -1,8 +1,8 @@
-from typing import Any, NamedTuple, Optional
+from typing import Any, NamedTuple, NoReturn
 
 from lark import Token
 
-from .ast_classes import Expression, Op
+from .ast_classes import Op
 from .build_bytecode import Bytecode
 from .constants import ValueType, KEYWORDS
 from .exceptions import SyntaxException, RuntimeException
@@ -15,18 +15,20 @@ class Var(NamedTuple):
 
 
 class VM:
-    def __init__(self):
+    def __init__(self) -> None:
         self.glob_vars: list[Var] = []
-    
-    def reset(self):
+
+    def reset(self) -> None:
         self.glob_vars.clear()
 
     def execute(self, bytecode: list[Bytecode]) -> None:
         for inst in bytecode:
-            if inst.command == 'store':
-                self.store_var(inst.start_line, inst.args['type'], inst.args['names'], inst.args['value'])
+            match inst.command:
+                case 'store':
+                    self.store_var(inst.start_line, inst.args['type'], inst.args['names'],
+                                   inst.args['value'])
 
-    def store_var(self, lineno: int, typename: Optional[str], names: tuple[str], value: Expression) -> None:
+    def store_var(self, lineno: int, typename: str | None, names: tuple[str], value: tuple) -> None:
         if len(names) > 1 and value is not None:
             raise SyntaxException(lineno, message='при нескольких переменных нельзя указывать значение')
         if typename is None:  # сохранение значения в уже объявленную переменную
@@ -41,21 +43,21 @@ class VM:
         else:  # объявление нескольких переменных (`цел а, б`)
             for name in names:
                 self._save_var(lineno, typename, name, None)
-    
-    def _save_var(self, lineno: int, typename: Optional[str], name: str, value: Optional[Expression]) -> None:
+
+    def _save_var(self, lineno: int, typename: str, name: str, value: tuple | None) -> None:
         if name in KEYWORDS:
             raise SyntaxException(lineno, message="клюевое слово в имени")
         if value is None:
             self.glob_vars.append(Var(typename, name, None))
             return
         val = self._count(lineno, value)
-        val_type = self._get_type(val)
+        val_type = self._get_type(lineno, val)
         if val_type == typename:  # типы целевой переменной и значения совпадают
             self.glob_vars.append(Var(typename, name, val))
         else:
             raise RuntimeException(lineno, message=f'нельзя "{typename} := {val_type}"')
 
-    def get_var(self, lineno: int, name: str) -> ValueType:
+    def get_var(self, lineno: int, name: str) -> ValueType | NoReturn:
         for var in self.glob_vars:
             if var.name == name:
                 if var.value is None:
@@ -63,15 +65,16 @@ class VM:
                 return var.value
         raise RuntimeException(lineno, 'имя не объявлено')
 
-
     def _var_defined(self, name: str) -> int:
-        """Возвращает индекс переменой с именем `name` в списке `self.vars`. Если такой нет, возвращает -1."""
+        """
+        Возвращает индекс переменой с именем `name` в списке `self.vars`. Если такой нет, возвращает -1.
+        """
         for i, var in enumerate(self.glob_vars):
             if var.name == name:
                 return i
         return -1
 
-    def _count(self, lineno: int, expr: Expression) -> ValueType:
+    def _count(self, lineno: int, expr: tuple) -> ValueType | NoReturn:
         """Вычисляет переданное выражение."""
         stack = []
         for tok in expr:
@@ -87,15 +90,15 @@ class VM:
         return stack[0]
 
     def _check_type_is_eq(self, lineno: int, a: ValueType, b: ValueType, op: str) -> None:
-        a_type = self._get_type(a)
-        b_type = self._get_type(b)
+        a_type = self._get_type(lineno, a)
+        b_type = self._get_type(lineno, b)
         if a_type != b_type:
             raise RuntimeException(lineno, f'нельзя "{b_type} {op} {a_type}"')
 
-    def _get_type(self, value: ValueType | Token) -> str:
+    def _get_type(self, lineno: int, value: ValueType | Token) -> str:
         """"Переводит" типы с python на алгоритмический."""
         if isinstance(value, Token):
-            return self._get_type(self.get_var(value.value))
+            return self._get_type(lineno, self.get_var(lineno, value.value))
         else:
             types = {
                 int: 'цел',
