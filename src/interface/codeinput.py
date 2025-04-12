@@ -1,5 +1,5 @@
-from PySide6.QtWidgets import QTextEdit
-from PySide6.QtCore import QEvent, Qt
+from PyQt6.QtWidgets import QTextEdit
+from PyQt6.QtCore import QEvent, Qt
 
 from .lexer import highlight_text
 
@@ -9,7 +9,7 @@ class CodeInput(QTextEdit):
         super().__init__(parent)
     
     def keyPressEvent(self, event):
-        if event.type() == QEvent.KeyPress and event.key() == Qt.Key.Key_Return:
+        if event.type() == QEvent.Type.KeyPress and event.key() == Qt.Key.Key_Return:
             print(repr(self.toPlainText()))
             cursor = self.textCursor()
             cursor.insertHtml('<br>')

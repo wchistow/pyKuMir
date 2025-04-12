@@ -1,4 +1,4 @@
-from PySide6 import QtWidgets
+from PyQt6 import QtWidgets
 
 from .codeinput import CodeInput
 
