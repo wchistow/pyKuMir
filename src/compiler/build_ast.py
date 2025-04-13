@@ -16,7 +16,9 @@ class ToAst(Transformer):
         return s[1:-1]
 
     def NUMBER(self, n: Token) -> int | float:
-        if '.' in n:
+        if n.startswith('$') : # шестандцатиричное
+            return int(n[1:], 16)
+        elif '.' in n:
             return float(n)
         else:
             return int(n)
@@ -58,11 +60,17 @@ def _improve(tree: Tree) -> Tree:
     for t in tree.iter_subtrees():
         for c in t.children:
             if isinstance(c, DeclaringVar):
+                if isinstance(c.value, Value):
+                    expr = Expression((c.value.value,))
+                elif c.value is not None:
+                    expr = Expression(_to_reverse_polish(c.value.children[0]))
+                else:
+                    expr = None
                 sv = StoreVar(
                     c.meta,
                     c.typename.value,
                     tuple(name.value for name in c.names.children),
-                    Expression(_to_reverse_polish(c.value.children[0])) if c.value is not None else None)
+                    expr)
                 t.children[t.children.index(c)] = sv
             if isinstance(c, Tree) and c.data.value == 'store_var':
                 sv = StoreVar(
