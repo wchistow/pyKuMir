@@ -37,13 +37,13 @@ class KuMirLexer(RegexLexer):
 
 
 def highlight_text(text: str) -> str:
-    return f'{CSS}<pre>{highlight(text, KuMirLexer(), HtmlFormatter(nowrap=True))[:-1].replace('\n', '<br>')}</pre>'
+    return f'{CSS}<pre>{highlight(text, KuMirLexer(), HtmlFormatter(lineseparator='<br />'))[:-1]}</pre>'
 
 
 if __name__ == '__main__':
     code = 'алг\nнач\n  цел а := 1+2\nкон'
 
-    print(repr(f'{CSS}<pre>{highlight(code, KuMirLexer(), HtmlFormatter(nowrap=True))[:-1].replace('\n', '<br>')}</pre>'))
+    print(repr(highlight_text(code)))
     # lexer = KuMirLexer()
     # for start, token, text in lexer.get_tokens_unprocessed(code):
     #     print(start, start + len(text), token)
