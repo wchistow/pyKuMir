@@ -34,6 +34,11 @@ class BinOp(_Ast):
     op: str
     right: Any
 
+@dataclass
+class Output(_Statement, ast_utils.WithMeta):
+    meta: Meta
+    exprs: list
+
 # Классы, используемые не в AST, а в `build_ast._improve`:
 
 @dataclass

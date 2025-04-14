@@ -1,4 +1,4 @@
-from typing import Any, NamedTuple, NoReturn
+from typing import Any, Callable, NamedTuple, NoReturn
 
 from lark import Token
 
@@ -15,8 +15,9 @@ class Var(NamedTuple):
 
 
 class VM:
-    def __init__(self) -> None:
+    def __init__(self, output_f: Callable[[str, ...], None]) -> None:
         self.glob_vars: list[Var] = []
+        self.output_f = output_f
 
     def reset(self) -> None:
         self.glob_vars.clear()
@@ -27,6 +28,8 @@ class VM:
                 case 'store':
                     self.store_var(inst.start_line, inst.args['type'], inst.args['names'],
                                    inst.args['value'])
+                case 'output':
+                    self.output(inst.start_line, inst.args['exprs'])
 
     def store_var(self, lineno: int, typename: str | None, names: tuple[str], value: tuple) -> None:
         if len(names) > 1 and value is not None:
@@ -43,6 +46,16 @@ class VM:
         else:  # объявление нескольких переменных (`цел а, б`)
             for name in names:
                 self._save_var(lineno, typename, name, None)
+
+    def output(self, lineno: int, exprs: list[tuple]) -> None:
+        res: list[str] = []
+        for expr in exprs:
+            if len(expr) == 1 and isinstance(expr[0], Token) and \
+                    expr[0].type == 'NAME' and expr[0].value == 'нс':
+                res.append('\n')
+                continue
+            res.append(str(self._count(lineno, expr)))
+        self.output_f(''.join(res))
 
     def _save_var(self, lineno: int, typename: str, name: str, value: tuple | None) -> None:
         if name in KEYWORDS:

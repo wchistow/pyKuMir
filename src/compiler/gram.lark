@@ -1,6 +1,6 @@
 start: code_block
 code_block: statement ((NEWLINE | ";") statement)* (NEWLINE | ";")?
-statement: store_var | declaring_var
+statement: store_var | declaring_var | output
 
 NUMBER: /\d+(\.\d*)?/ | /\$[\dabcdefABCDEF]+/
 STRING: /".*"/
@@ -20,6 +20,9 @@ declaring_var: TYPE var_name ((":=" expr)? | ("=" value))
 store_var: /[^(TYPE)NAME]/ ":=" expr
 var_name: NAME ("," NAME)*
 value: NUMBER | STRING | CHAR | NAME
+
+comma_exprs: expr ("," expr)*
+output: "вывод" comma_exprs
 
 %import common.WS
 %import common.NEWLINE

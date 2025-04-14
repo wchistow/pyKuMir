@@ -4,7 +4,7 @@ import sys
 from lark import Token
 import pytest
 
-PATH_TO_SRC = Path(__file__).parent.parent.absolute() / 'src'
+PATH_TO_SRC = Path(__file__).parent.parent.parent.absolute() / 'src'
 
 sys.path.append(str(PATH_TO_SRC.absolute()))
 
@@ -13,7 +13,7 @@ from compiler.build_bytecode import Bytecode
 from compiler.exceptions import SyntaxException, RuntimeException
 from compiler.vm import VM, Var
 
-vm = VM()
+vm = VM(output_f=lambda s: ...)
 
 
 def setup_function(function):

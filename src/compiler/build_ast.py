@@ -4,7 +4,7 @@ import sys
 from lark import Lark, ast_utils, Transformer, v_args, Tree, Token
 from lark.exceptions import UnexpectedInput
 
-from .ast_classes import DeclaringVar, Value, BinOp, StoreVar, Op, Expression
+from .ast_classes import DeclaringVar, Value, BinOp, StoreVar, Op, Expression, Output
 from .constants import ValueType
 from .exceptions import SyntaxException
 
@@ -59,26 +59,33 @@ def build_ast(code: str) -> Tree:
 def _improve(tree: Tree) -> Tree:
     for t in tree.iter_subtrees():
         for c in t.children:
-            if isinstance(c, DeclaringVar):
-                if isinstance(c.value, Value):
-                    expr = Expression((c.value.value,))
-                elif c.value is not None:
-                    expr = Expression(_to_reverse_polish(c.value.children[0]))
-                else:
-                    expr = None
-                sv = StoreVar(
-                    c.meta,
-                    c.typename.value,
-                    tuple(name.value for name in c.names.children),
-                    expr)
-                t.children[t.children.index(c)] = sv
-            if isinstance(c, Tree) and c.data.value == 'store_var':
-                sv = StoreVar(
+            new = None
+            match c:
+                case DeclaringVar():
+                    if isinstance(c.value, Value):
+                        expr = Expression((c.value.value,))
+                    elif c.value is not None:
+                        expr = Expression(_to_reverse_polish(c.value.children[0]))
+                    else:
+                        expr = None
+                    new = StoreVar(
+                        c.meta,
+                        c.typename.value,
+                        tuple(name.value for name in c.names.children),
+                        expr)
+                case Output():
+                    new = Output(
+                        c.meta,
+                        [Expression(_to_reverse_polish(expr.children)) for expr in c.exprs.children]
+                    )
+            if isinstance(c, Tree) and  c.data.value == 'store_var':
+                new = StoreVar(
                     c.meta,
                     None,
                     tuple(c.children[0]),
                     Expression(_to_reverse_polish(c.children[1].children)) if c.children[1] is not None else None)
-                t.children[t.children.index(c)] = sv
+            if new is not None:
+                t.children[t.children.index(c)] = new
     return tree
 
 
