@@ -6,6 +6,11 @@ from .lexer import highlight_text
 class CodeInput(QTextEdit):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
+        self.setPlainText('алг\nнач\n  \nкон')
+        self.highlight_syntax()
+        cursor = self.textCursor()
+        cursor.setPosition(10)
+        self.setTextCursor(cursor)
 
     def keyPressEvent(self, event) -> None:
         super().keyPressEvent(event)
