@@ -46,7 +46,7 @@ class VM:
 
     def _save_var(self, lineno: int, typename: str, name: str, value: tuple | None) -> None:
         if name in KEYWORDS:
-            raise SyntaxException(lineno, message="клюевое слово в имени")
+            raise SyntaxException(lineno, message="ключевое слово в имени")
         if value is None:
             self.glob_vars.append(Var(typename, name, None))
             return
