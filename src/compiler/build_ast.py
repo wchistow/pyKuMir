@@ -30,10 +30,6 @@ class ToAst(Transformer):
             return False
         return n
 
-    @v_args(inline=True)
-    def start(self, x):
-        return x
-
 
 def build_ast(code: str) -> Tree:
     """

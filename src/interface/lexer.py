@@ -7,17 +7,18 @@ from compiler.constants import KEYWORDS, TYPES
 
 CSS = '''<style>
 .k {
-    color: red;
+    font-weight: bold;
 }
 .s {
-    color: orange;
+    font-weight: bold;
+    color: blue;
 }
 .c {
+    font-weight: bold;
+    font-style: italic;
     color: grey;
 }
 </style>'''
-# self.codeinput.tag_configure("Token.Literal.String", foreground='orange')
-# self.codeinput.tag_configure("Token.Comment", foreground="grey")
 
 
 class KuMirLexer(RegexLexer):

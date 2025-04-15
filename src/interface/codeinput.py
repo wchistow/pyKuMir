@@ -6,10 +6,10 @@ from .lexer import highlight_text
 class CodeInput(QTextEdit):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        self.setPlainText('алг\nнач\n  \nкон')
+        self.setPlainText('вывод "привет"')
         self.highlight_syntax()
         cursor = self.textCursor()
-        cursor.setPosition(10)
+        cursor.setPosition(14)
         self.setTextCursor(cursor)
 
     def keyPressEvent(self, event) -> None:
