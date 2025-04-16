@@ -1,4 +1,4 @@
-from typing import Any, Callable, NamedTuple, NoReturn
+from typing import Callable, NamedTuple, NoReturn
 
 from lark import Token
 
@@ -11,11 +11,11 @@ from .exceptions import SyntaxException, RuntimeException
 class Var(NamedTuple):
     typename: str
     name: str
-    value: Any
+    value: ValueType | None
 
 
 class VM:
-    def __init__(self, output_f: Callable[[str, ...], None]) -> None:
+    def __init__(self, output_f: Callable[[str], None]) -> None:
         self.glob_vars: list[Var] = []
         self.output_f = output_f
 
@@ -24,12 +24,10 @@ class VM:
 
     def execute(self, bytecode: list[Bytecode]) -> None:
         for inst in bytecode:
-            match inst.command:
-                case 'store':
-                    self.store_var(inst.start_line, inst.args['type'], inst.args['names'],
-                                   inst.args['value'])
-                case 'output':
-                    self.output(inst.start_line, inst.args['exprs'])
+            if inst.command == 'store':
+                self.store_var(inst.start_line, inst.args[0], inst.args[1], inst.args[2])
+            elif inst.command == 'output':
+                self.output(inst.start_line, inst.args[0])
 
     def store_var(self, lineno: int, typename: str | None, names: tuple[str], value: tuple) -> None:
         if len(names) > 1 and value is not None:

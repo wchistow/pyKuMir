@@ -1,7 +1,7 @@
 """Строит AST с помощью lark."""
 import sys
 
-from lark import Lark, ast_utils, Transformer, v_args, Tree, Token
+from lark import Lark, ast_utils, Transformer, Tree, Token
 from lark.exceptions import UnexpectedInput
 
 from .ast_classes import DeclaringVar, Value, BinOp, StoreVar, Op, Expression, Output
@@ -56,29 +56,28 @@ def _improve(tree: Tree) -> Tree:
     for t in tree.iter_subtrees():
         for c in t.children:
             new = None
-            match c:
-                case DeclaringVar():
-                    if isinstance(c.value, Value):
-                        expr = Expression((c.value.value,))
-                    elif c.value is not None:
-                        expr = Expression(_to_reverse_polish(c.value.children[0]))
-                    else:
-                        expr = None
-                    new = StoreVar(
-                        c.meta,
-                        c.typename.value,
-                        tuple(name.value for name in c.names.children),
-                        expr)
-                case Output():
-                    new = Output(
-                        c.meta,
-                        [Expression(_to_reverse_polish(expr.children)) for expr in c.exprs.children]
-                    )
-            if isinstance(c, Tree) and  c.data.value == 'store_var':
+            if isinstance(c, DeclaringVar):
+                if isinstance(c.value, Value):
+                    expr = Expression((c.value.value,))
+                elif c.value is not None:
+                    expr = Expression(_to_reverse_polish(c.value.children[0]))
+                else:
+                    expr = None
+                new = StoreVar(
+                    c.meta,
+                    c.typename.value,
+                    tuple(name.value for name in c.names.children),
+                    expr)
+            elif isinstance(c, Output):
+                new = Output(
+                    c.meta,
+                    [Expression(_to_reverse_polish(expr.children)) for expr in c.exprs.children]
+                )
+            elif isinstance(c, Tree) and c.data.value == 'store_var':
                 new = StoreVar(
                     c.meta,
                     None,
-                    tuple(c.children[0]),
+                    (c.children[0],),
                     Expression(_to_reverse_polish(c.children[1].children)) if c.children[1] is not None else None)
             if new is not None:
                 t.children[t.children.index(c)] = new
@@ -87,11 +86,8 @@ def _improve(tree: Tree) -> Tree:
 
 def _get_priority(op: str) -> int:
     """Возвращает приоритет оператора."""
-    match op:
-        case '+' | '-':
-            return 0
-        case '*' | '/':
-            return 1
+    if op in ('*', '/'):
+        return 1
     return 0
 
 
@@ -123,39 +119,36 @@ def _to_reverse_polish(expr: list | Tree) -> tuple[ValueType | Op]:
                     indent -= 1
                     code_in_brackets.append(token)
         else:
-            match token:
-                case Value():
-                    notation.append(token.value)
-                case Token():
-                    if token == '(':
-                        in_parentheses = True
-                    else:
-                        while True:
-                            if not operator_stack:
-                                break
-                            if _get_priority(operator_stack[-1]) >= _get_priority(token.value):
-                                notation.append(Op(operator_stack.pop().value))
-                            else:
-                                break
-                        operator_stack.append(token)
+            if isinstance(token, Value):
+                notation.append(token.value)
+            elif isinstance(token, Token):
+                if token == '(':
+                    in_parentheses = True
+                else:
+                    while True:
+                        if not operator_stack:
+                            break
+                        if _get_priority(operator_stack[-1]) >= _get_priority(token.value):
+                            notation.append(Op(operator_stack.pop().value))
+                        else:
+                            break
+                    operator_stack.append(token)
     for op in operator_stack[::-1]:
         notation.append(Op(op.value))
     return tuple(notation)
 
 
 def _get_all_toks(expr) -> list:
-    match expr:
-        case BinOp():
-            return [*_get_all_toks(expr.left), expr.op, *_get_all_toks(expr.right)]
-        case Value():
-            return [expr]
-        case Tree():
-            res = []
-            for c in expr.children:
-                res.extend(_get_all_toks(c))
-            return res
-        case _:
-            return [expr]
+    if isinstance(expr, BinOp):
+        return [*_get_all_toks(expr.left), expr.op, *_get_all_toks(expr.right)]
+    elif isinstance(expr, Value):
+        return [expr]
+    elif isinstance(expr, Tree):
+        res = []
+        for c in expr.children:
+            res.extend(_get_all_toks(c))
+        return res
+    return [expr]
 
 
 if __name__ == '__main__':
