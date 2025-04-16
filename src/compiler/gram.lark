@@ -4,7 +4,6 @@ statement: store_var | declaring_var | output
 
 NUMBER: /\d+(\.\d*)?/ | /\$[\dabcdefABCDEF]+/
 STRING: /"[^".]*"/
-CHAR: "'" /.?/ "'"
 NAME: /[A-Za-zА-Яа-я_][A-Za-zА-Яа-я_0-9]*/
 OP: "+" | "-" | "*" | "/" | "**" | "=" | "<" | ">" | "," | "." | ">=" | "<=" | "<>"
 COMMENT: "|" /[^\n]/*
@@ -19,7 +18,7 @@ expr: value | bin_op | BRACKET_OPEN expr BRACKET_CLOSE
 declaring_var: TYPE var_name ((":=" expr)? | ("=" value))
 store_var: /[^(TYPE)NAME]/ ":=" expr
 var_name: NAME ("," NAME)*
-value: NUMBER | STRING | CHAR | NAME
+value: NUMBER | STRING | NAME
 
 comma_exprs: expr ("," expr)*
 output: "вывод" comma_exprs
