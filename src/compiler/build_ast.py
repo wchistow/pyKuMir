@@ -1,4 +1,4 @@
-"""Строит AST с помощью lark."""
+"""Строит АСД с помощью lark."""
 import sys
 
 from lark import Lark, ast_utils, Transformer, Tree, Token
@@ -33,12 +33,12 @@ class ToAst(Transformer):
 
 def build_ast(code: str) -> Tree:
     """
-    Строит AST с помощью lark.
+    Строит АСД с помощью lark.
 
     Args:
         code (str): исходный код программы на алгоритмическом языке
     Returns:
-        Tree: AST
+        Tree: АСД
     """
 
     parser = Lark.open('gram.lark', rel_to=__file__, propagate_positions=True, parser='lalr')
@@ -92,6 +92,7 @@ def _get_priority(op: str) -> int:
 
 
 def _to_reverse_polish(expr: list | Tree) -> tuple[ValueType | Op]:
+    """АСД -> обратная польская запись."""
     notation: list[ValueType | Op] = []
     operator_stack: list[Token] = []
     in_parentheses = False
@@ -139,6 +140,7 @@ def _to_reverse_polish(expr: list | Tree) -> tuple[ValueType | Op]:
 
 
 def _get_all_toks(expr) -> list:
+    """АСД -> список токенов."""
     if isinstance(expr, BinOp):
         return [*_get_all_toks(expr.left), expr.op, *_get_all_toks(expr.right)]
     elif isinstance(expr, Value):

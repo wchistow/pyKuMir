@@ -37,7 +37,7 @@ class BinOp(_Ast):
 @dataclass
 class Output(_Statement, ast_utils.WithMeta):
     meta: Meta
-    exprs: list
+    exprs: list['Expression']
 
 # Классы, используемые не в AST, а в `build_ast._improve`:
 

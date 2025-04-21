@@ -2,6 +2,7 @@ from typing import Callable, NamedTuple, NoReturn
 
 from lark import Token
 
+from .bytecode import Bytecode
 from .constants import ValueType, KEYWORDS
 from .exceptions import SyntaxException, RuntimeException
 
@@ -20,22 +21,24 @@ class VM:
         self.stack: list[ValueType | None] = []
 
     def reset(self) -> None:
+        """Сбрасывает состояние виртуальной машины."""
         self.glob_vars.clear()
 
     def execute(self, bytecode: list[tuple]) -> None:
         for inst in bytecode:
-            if inst[1] == 'load':
+            if inst[1] == Bytecode.LOAD:
                 self.stack.append(inst[2][0])
-            elif inst[1] == 'load_name':
+            elif inst[1] == Bytecode.LOAD_NAME:
                 self.stack.append(self.get_var(inst[0], inst[2][0]))
-            elif inst[1] == 'bin_op':
+            elif inst[1] == Bytecode.BIN_OP:
                 self.bin_op(inst[0], inst[2][0])
-            elif inst[1] == 'store':
+            elif inst[1] == Bytecode.STORE:
                 self.store_var(inst[0], inst[2][0], inst[2][1])
-            elif inst[1] == 'output':
+            elif inst[1] == Bytecode.OUTPUT:
                 self.output(inst[0], inst[2][0])
 
     def store_var(self, lineno: int, typename: str | None, names: tuple[str]) -> None:
+        """Обрабатывает инструкцию STORE"""
         value = self.stack.pop()
         if len(names) > 1 and value is not None:
             raise SyntaxException(lineno, message='при нескольких переменных нельзя указывать значение')
@@ -65,6 +68,10 @@ class VM:
         self.output_f(''.join(res[::-1]))
 
     def _save_var(self, lineno: int, typename: str, name: str, value: ValueType | None) -> None:
+        """
+        Создаёт переменную типа `typename` с именем `name`
+        и значением `value` (`None` - объявлена, но не определена).
+        """
         if name in KEYWORDS:
             raise SyntaxException(lineno, message="ключевое слово в имени")
         if value is None:
@@ -88,7 +95,7 @@ class VM:
 
     def _var_defined(self, name: str) -> int:
         """
-        Возвращает индекс переменой с именем `name` в списке `self.vars`. Если такой нет, возвращает -1.
+        Возвращает индекс переменой с именем `name` в списке `self.glob_vars`. Если такой нет, возвращает -1.
         """
         for i, var in enumerate(self.glob_vars):
             if var.name == name:
@@ -102,7 +109,7 @@ class VM:
             raise RuntimeException(lineno, f'нельзя "{b_type} {op} {a_type}"')
 
     def _get_type(self, lineno: int, value: ValueType | Token) -> str:
-        """"Переводит" типы с python на алгоритмический."""
+        """"Переводит" типы с python на алгоритмический язык (5 -> 'цел')."""
         if isinstance(value, Token):
             return self._get_type(lineno, self.get_var(lineno, value.value))
         else:
