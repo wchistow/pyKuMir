@@ -1,7 +1,5 @@
 from typing import Callable, NamedTuple, NoReturn
 
-from lark import Token
-
 from .bytecode import Bytecode
 from .constants import ValueType
 from .exceptions import SyntaxException, RuntimeException
@@ -107,7 +105,7 @@ class VM:
         if a_type != b_type:
             raise RuntimeException(lineno, f'нельзя "{b_type} {op} {a_type}"')
 
-    def _get_type(self, lineno: int, value: ValueType | Token) -> str:
+    def _get_type(self, lineno: int, value: ValueType) -> str:
         """"Переводит" типы с python на алгоритмический язык (5 -> 'цел')."""
         types = {
             int: 'цел',

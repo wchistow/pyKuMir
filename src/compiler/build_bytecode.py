@@ -2,7 +2,7 @@ from .ast_classes import StoreVar, Output, Op
 from .bytecode import Bytecode
 from .constants import ValueType
 
-BytecodeType = tuple[int, Bytecode, tuple]
+BytecodeType = tuple[int, Bytecode, tuple[ValueType | None | tuple[ValueType], ...]]
 
 
 def build_bytecode(parsed_code: list) -> list[BytecodeType]:
@@ -30,7 +30,7 @@ def _expr_bc(lineno: int, expr: tuple[ValueType | Op]) -> list[BytecodeType]:
     BIN_OP +
     ```
     """
-    res = []
+    res: list[BytecodeType] = []
     for v in expr:
         if isinstance(v, str) and v.isalpha():  # имя
             res.append((lineno, Bytecode.LOAD_NAME, (v,)))

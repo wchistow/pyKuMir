@@ -3,13 +3,17 @@ from typing import Optional, Union
 
 from .constants import ValueType
 
+
+class Statement: ...
+
+
 @dataclass
-class Output:
+class Output(Statement):
     lineno: int
     exprs: list[tuple[Union[ValueType, 'Op']]]
 
 @dataclass
-class StoreVar:
+class StoreVar(Statement):
     lineno: int
     typename: str | None  # `None` - если переменная уже объявлена (`а := 5`)
     names: tuple[str]

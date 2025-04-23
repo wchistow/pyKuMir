@@ -1,8 +1,9 @@
 from enum import auto, Enum
 import re
+from typing import Iterable
 
-from .ast_classes import StoreVar, Op, Output
-from .constants import KEYWORDS, TYPES
+from .ast_classes import Statement, StoreVar, Op, Output
+from .constants import KEYWORDS, TYPES, ValueType
 from .exceptions import SyntaxException
 
 token_specification = [
@@ -51,10 +52,10 @@ class Parser:
 
         self.state = State.WAIT
         self.env = Env.WAIT
-        self.cur_expr = []
+        self.cur_expr: list[ValueType | Op] = []
         self.line = 0
-        self.cur_cls = None
-        self.res = []
+        self.cur_cls: Statement | None = None
+        self.res: list[Statement] = []
 
     def reset(self) -> None:
         self.state = State.WAIT
@@ -64,7 +65,7 @@ class Parser:
         self.cur_cls = None
         self.res.clear()
 
-    def parse(self, code: str) -> list:
+    def parse(self, code: str) -> list[Statement]:
         for mo in re.finditer(TOK_REGEX, code):
             kind = mo.lastgroup
             value = mo.group()
@@ -216,17 +217,17 @@ def improve(parsed_code: list) -> list:
     return parsed_code
 
 
-def _get_priority(op: str) -> int:
+def _get_priority(op: Op) -> int:
     """Возвращает приоритет оператора."""
-    if op in ('*', '/', '**'):
+    if op.op in ('*', '/', '**'):
         return 1
     return 0
 
 
-def _to_reverse_polish(expr: tuple) -> tuple:
+def _to_reverse_polish(expr: Iterable[ValueType | Op]) -> tuple:
     """Выражение -> обратная польская запись."""
-    notation = []
-    operator_stack = []
+    notation: list[ValueType | Op] = []
+    operator_stack: list[Op] = []
     in_parentheses = False
     indent = 0
     code_in_brackets = []
@@ -253,7 +254,7 @@ def _to_reverse_polish(expr: tuple) -> tuple:
                     while True:
                         if not operator_stack:
                             break
-                        if _get_priority(operator_stack[-1]) >= _get_priority(token.op):
+                        if _get_priority(operator_stack[-1]) >= _get_priority(token):
                             notation.append(Op(operator_stack.pop().op))
                         else:
                             break
