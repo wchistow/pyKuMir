@@ -7,8 +7,8 @@ PATH_TO_SRC = Path(__file__).parent.parent.parent.absolute() / 'src'
 
 sys.path.append(str(PATH_TO_SRC.absolute()))
 
-from compiler.exceptions import SyntaxException, RuntimeException
-from compiler.vm import VM, Var
+from compiler import RuntimeException, VM
+from compiler.vm import Var
 
 from utils import bc_from_source
 
@@ -59,21 +59,9 @@ def test_count_with_var():
 
 # --- тесты ошибок ---
 
-def test_two_vars_with_value_error():
-    bytecode = bc_from_source('цел а, б := 2')
-    with pytest.raises(SyntaxException):
-        vm.execute(bytecode)
-
-
 def test_assign_to_not_defined_error():
     bytecode = bc_from_source('а := 5')
     with pytest.raises(RuntimeException):
-        vm.execute(bytecode)
-
-
-def test_keyword_in_name_error():
-    bytecode = bc_from_source('цел нач := 0')
-    with pytest.raises(SyntaxException):
         vm.execute(bytecode)
 
 

@@ -10,7 +10,6 @@
 
  + Python>=3.10
    ```
-   lark==1.*
    Pygments>=2.2
    PyQt6
    ```
@@ -21,7 +20,7 @@
 #### Python-библиотеки
 
 ```sh
-pip install lark==1.* Pygments>=2.2 PyQt6
+pip install Pygments>=2.2 PyQt6
 ```
 
 #### Qt

@@ -3,7 +3,7 @@ from typing import Callable, NamedTuple, NoReturn
 from lark import Token
 
 from .bytecode import Bytecode
-from .constants import ValueType, KEYWORDS
+from .constants import ValueType
 from .exceptions import SyntaxException, RuntimeException
 
 
@@ -23,6 +23,7 @@ class VM:
     def reset(self) -> None:
         """Сбрасывает состояние виртуальной машины."""
         self.glob_vars.clear()
+        self.stack.clear()
 
     def execute(self, bytecode: list[tuple]) -> None:
         for inst in bytecode:
@@ -54,7 +55,7 @@ class VM:
         else:  # объявление нескольких переменных (`цел а, б`)
             for name in names:
                 self._save_var(lineno, typename, name, None)
-    
+
     def bin_op(self, lineno: int, op: str) -> None:
         a = self.stack.pop()
         b = self.stack.pop()
@@ -72,8 +73,6 @@ class VM:
         Создаёт переменную типа `typename` с именем `name`
         и значением `value` (`None` - объявлена, но не определена).
         """
-        if name in KEYWORDS:
-            raise SyntaxException(lineno, message="ключевое слово в имени")
         if value is None:
             self.glob_vars.append(Var(typename, name, None))
             return
@@ -110,13 +109,10 @@ class VM:
 
     def _get_type(self, lineno: int, value: ValueType | Token) -> str:
         """"Переводит" типы с python на алгоритмический язык (5 -> 'цел')."""
-        if isinstance(value, Token):
-            return self._get_type(lineno, self.get_var(lineno, value.value))
-        else:
-            types = {
-                int: 'цел',
-                float: 'вещ',
-                str: 'лит',
-                bool: 'лог'
-            }
-            return types[type(value)]
+        types = {
+            int: 'цел',
+            float: 'вещ',
+            str: 'лит',
+            bool: 'лог'
+        }
+        return types[type(value)]
