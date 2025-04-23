@@ -49,13 +49,13 @@ class Interface(QWidget):
 
     def run_code(self):
         code = self.codeinput.toPlainText()
+        self.console.output_sys(f'>> {datetime.now().strftime("%H:%M:%S")} - Новая программа - Начало выполнения\n')
         try:
             bc = code_to_bytecode(code)
         except SyntaxException as e:
             print(e.args)
         else:
             vm = VM(self.console.output)
-            self.console.output_sys(f'>> {datetime.now().strftime("%H:%M:%S")} - Новая программа - Начало выполнения\n')
             try:
                 for inst in bc:
                     vm.execute([inst])
