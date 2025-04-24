@@ -5,3 +5,6 @@ __pycache__/
 
 uv.lock
 test.py
+
+.project
+.pydevproject

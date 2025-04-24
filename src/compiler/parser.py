@@ -40,7 +40,6 @@ class State(Enum):
 
 class Env(Enum):
     """Окружение, в котором мы сейчас находимся."""
-    WAIT = auto()
     VAR_DEF = auto()  # объявление переменной
     VAR_ASSIGN = auto()  # присваивание
     OUTPUT = auto()  # вывод
@@ -51,7 +50,7 @@ class Parser:
         self.debug = debug
 
         self.state = State.WAIT
-        self.env = Env.WAIT
+        self.envs = []
         self.cur_expr: list[ValueType | Op] = []
         self.line = 0
         self.cur_cls: Statement | None = None
@@ -59,7 +58,7 @@ class Parser:
 
     def reset(self) -> None:
         self.state = State.WAIT
-        self.env = Env.WAIT
+        self.envs.clear()
         self.cur_expr.clear()
         self.line = 0
         self.cur_cls = None
@@ -115,15 +114,15 @@ class Parser:
         """Обрабатвает первый токен в строке."""
         if kind == 'TYPE':  # объвление переменной(ых)
             self.cur_cls = StoreVar(self.line, value, tuple(), None)
-            self.env = Env.VAR_DEF
+            self.envs.append(Env.VAR_DEF)
             self.state = State.VAR_NAME
         elif kind == 'NAME' and value == 'вывод':
             self.cur_cls = Output(self.line, [])
-            self.env = Env.OUTPUT
+            self.envs.append(Env.OUTPUT)
             self.state = State.OUTPUT_EXPR
         elif kind == 'NAME':  # присваивание
             self.cur_cls = StoreVar(self.line, None, (value,), None)
-            self.env = Env.VAR_ASSIGN
+            self.envs.append(Env.VAR_ASSIGN)
             self.state = State.VAR_ASSIGN
         else:
             raise SyntaxException(self.line, value)
@@ -141,7 +140,7 @@ class Parser:
             self.state = State.VAR_ASSIGN
     
     def _handle_var_assign(self, tok_kind: str, tok_value: str) -> None:
-        if self.env == Env.VAR_DEF:
+        if self.envs[-1] == Env.VAR_DEF:
             if tok_kind == 'ASSIGN':
                 self.state = State.VAR_EXPR
             elif tok_kind == 'EQ':
@@ -150,7 +149,7 @@ class Parser:
                 self.state = State.VAR_NAME
             else:
                 raise SyntaxException(self.line, tok_value)
-        elif self.env == Env.VAR_ASSIGN:
+        elif self.envs[-1] == Env.VAR_ASSIGN:
             if tok_kind == 'ASSIGN':
                 self.state = State.VAR_EXPR
             else:
@@ -177,7 +176,7 @@ class Parser:
         self.cur_cls = None
         self.cur_expr.clear()
         self.state = State.WAIT
-        self.env = Env.WAIT
+        self.envs.pop()
 
     def _handle_expr(self, tok_kind: str, tok_value: str) -> None:
         if tok_kind in ('STRING', 'NAME'):
