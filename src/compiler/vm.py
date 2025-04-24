@@ -12,6 +12,13 @@ class Var(NamedTuple):
 
 
 class VM:
+    TYPES = {
+            int: 'цел',
+            float: 'вещ',
+            str: 'лит',
+            bool: 'лог'
+    }
+
     def __init__(self, output_f: Callable[[str], None]) -> None:
         self.glob_vars: list[Var] = []
         self.output_f = output_f
@@ -74,7 +81,7 @@ class VM:
         if value is None:
             self.glob_vars.append(Var(typename, name, None))
             return
-        value_type = self._get_type(lineno, value)
+        value_type = self.TYPES[type(value)]
         if value_type == typename:  # типы целевой переменной и значения совпадают
             self.glob_vars.append(Var(typename, name, value))
         else:
@@ -100,17 +107,7 @@ class VM:
         return -1
 
     def _check_type_is_eq(self, lineno: int, a: ValueType, b: ValueType, op: str) -> None:
-        a_type = self._get_type(lineno, a)
-        b_type = self._get_type(lineno, b)
+        a_type = self.TYPES[type(a)]
+        b_type = self.TYPES[type(b)]
         if a_type != b_type:
             raise RuntimeException(lineno, f'нельзя "{b_type} {op} {a_type}"')
-
-    def _get_type(self, lineno: int, value: ValueType) -> str:
-        """"Переводит" типы с python на алгоритмический язык (5 -> 'цел')."""
-        types = {
-            int: 'цел',
-            float: 'вещ',
-            str: 'лит',
-            bool: 'лог'
-        }
-        return types[type(value)]
