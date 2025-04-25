@@ -1,8 +1,9 @@
 from enum import auto, Enum
+from dataclasses import dataclass
 import re
 from typing import Iterable
 
-from .ast_classes import Statement, StoreVar, Op, Output
+from .ast_classes import AlgStart, AlgEnd, Statement, StoreVar, Op, Output
 from .constants import KEYWORDS, TYPES, ValueType
 from .exceptions import SyntaxException
 
@@ -23,187 +24,218 @@ token_specification = [
 TOK_REGEX = '|'.join('(?P<%s>%s)' % pair for pair in token_specification)
 
 
-class State(Enum):
-    """Следующий токен, ожидаемый парсером"""
-    WAIT = auto()
-
-    # объявление и присваивание
-    VAR_NAME = auto()
-    VAR_ASSIGN = auto()  # знак присваивания (`:=` или `=`)
-    VAR_EXPR = auto()  # значение переменной
-    VAR_CONST_EXPR = auto()  # значение константы
-
-    OUTPUT_EXPR = auto()  # выражение после `вывод`
-
-    NEWLINE = auto()
+@dataclass
+class Token:
+    kind: str
+    value: str
 
 
 class Env(Enum):
     """Окружение, в котором мы сейчас находимся."""
-    VAR_DEF = auto()  # объявление переменной
-    VAR_ASSIGN = auto()  # присваивание
-    OUTPUT = auto()  # вывод
+    INTRODUCTION = auto()
+    MAIN = auto()
+    ALG_HEADER = auto()
 
 
 class Parser:
-    def __init__(self, debug: bool = False) -> None:
+    def __init__(self, code: str, debug: bool = False) -> None:
         self.debug = debug
 
-        self.state = State.WAIT
-        self.envs = []
+        self.envs = [Env.INTRODUCTION]
         self.cur_expr: list[ValueType | Op] = []
         self.line = 0
         self.cur_cls: Statement | None = None
         self.res: list[Statement] = []
 
+        # на будущее, для других алгоритмов
+        self._was_alg = False
+
+        self.tokens = re.finditer(TOK_REGEX, code+'\n')
+
     def reset(self) -> None:
-        self.state = State.WAIT
         self.envs.clear()
         self.cur_expr.clear()
         self.line = 0
         self.cur_cls = None
         self.res.clear()
 
-    def parse(self, code: str) -> list[Statement]:
-        for mo in re.finditer(TOK_REGEX, code):
-            kind = mo.lastgroup
-            value = mo.group()
+        self._was_alg = False
 
-            if kind == 'SKIP':  # пропускаем пробелы
-                continue
-            elif kind == 'NEWLINE':
-                self._handle_newline()
-                continue
-
-            if self.debug:
-                print(f'{self.state:20} {kind:10} {value}')
-
-            if self.state == State.NEWLINE:
-                raise SyntaxException(self.line, value)
-            elif self.state == State.WAIT:
-                self._handle_first(kind, value)
-            elif self.state == State.VAR_NAME:
-                if kind == 'NAME':
-                    self._handle_var_name(value)
-                else:
-                    raise SyntaxException(self.line, value)
-            elif self.state == State.VAR_ASSIGN:
-                self._handle_var_assign(kind, value)
-            elif self.state == State.VAR_EXPR:
-                self._handle_expr(kind, value)
-            elif self.state == State.VAR_CONST_EXPR:
-                self._handle_const_expr(kind, value)
-            elif self.state == State.OUTPUT_EXPR:
-                if kind == 'COMMA':
-                    if self.cur_expr:
-                        self.cur_cls.exprs.append(tuple(self.cur_expr))
-                    else:
-                        raise SyntaxException(self.line, value)
-                    self.cur_expr.clear()
-                else:
-                    self._handle_expr(kind, value)
-
-        self._handle_newline()
+    def _next_token(self) -> None:
+        mo = next(self.tokens)
+        self.cur_token = Token(mo.lastgroup, mo.group())
+        if self.cur_token.kind == 'SKIP':
+            self._next_token()
 
         if self.debug:
-            print('-' * 40)
+            print(f'{self.cur_token.kind:10} {self.cur_token.value!r}')
+
+    def parse(self) -> list[Statement]:
+        try:
+            self._parse()
+        except StopIteration:
+            if self.envs and self.envs[-1] == Env.MAIN:
+                raise SyntaxException(self.line, '\n', 'нет "кон" после "нач"') from None
+            if self.debug:
+                print('-' * 40)
 
         return self.res
 
-    def _handle_first(self, kind: str, value: str) -> None:
-        """Обрабатвает первый токен в строке."""
-        if kind == 'TYPE':  # объвление переменной(ых)
-            self.cur_cls = StoreVar(self.line, value, tuple(), None)
-            self.envs.append(Env.VAR_DEF)
-            self.state = State.VAR_NAME
-        elif kind == 'NAME' and value == 'вывод':
-            self.cur_cls = Output(self.line, [])
-            self.envs.append(Env.OUTPUT)
-            self.state = State.OUTPUT_EXPR
-        elif kind == 'NAME':  # присваивание
-            self.cur_cls = StoreVar(self.line, None, (value,), None)
-            self.envs.append(Env.VAR_ASSIGN)
-            self.state = State.VAR_ASSIGN
-        else:
-            raise SyntaxException(self.line, value)
+    def _parse(self) -> None:
+        while True:
+            self._next_token()
 
-    def _handle_var_name(self, name: str) -> None:
-        if name in KEYWORDS or name in TYPES:
-            raise SyntaxException(self.line, name, message='ключевое слово в имени')
-        if self.cur_cls.names != tuple():  # уже есть имена
-            self.cur_cls.names = (*self.cur_cls.names, name)
-            self.res.append(self.cur_cls)
-            # это объявление нескольких переменных - значения быть не может
-            self.state = State.NEWLINE
+            if self.cur_token.kind == 'NEWLINE':
+                self._handle_newline()
+                continue
+
+            if self.envs[-1] == Env.INTRODUCTION:
+                if self.cur_token.value == 'алг':  # введение закончилось
+                    self.envs.pop()
+                    self.envs.append(Env.MAIN)
+
+                    self._handle_alg_header(is_main=True)
+
+                    self._was_alg = True
+                    continue
+            elif self.envs[-1] == Env.MAIN:
+                if self.cur_token.value == 'кон':
+                    self.res.append(AlgEnd())
+                    self.envs.pop()
+                    continue
+
+            self._handle_statement()
+
+        self._handle_newline()
+
+    def _handle_alg_header(self, is_main: bool):
+        alg_name = []
+
+        self._next_token()
+        if self.cur_token.kind == 'NAME':
+            if self.cur_token.value == 'нач':
+                self.res.append(AlgStart(is_main=is_main, name=''))
+                return
+            alg_name.append(self.cur_token.value)
+        elif self.cur_token.kind != 'NEWLINE':
+            raise SyntaxException(self.line, self.cur_token.value)
+        self._next_token()
+        while (self.cur_token.kind in ('NAME', 'NUMBER', 'TYPE')
+                    and self.cur_token.value != 'нач'):
+            if self.cur_token.kind == 'NAME':
+                alg_name.append(self.cur_token.value)
+            self._next_token()
+        if self.cur_token.value != 'нач':
+            raise SyntaxException(self.line, self.cur_token.value, 'после "алг" нет "нач"')
+
+        self.res.append(AlgStart(is_main=is_main, name=' '.join(alg_name)))
+
+    def _handle_statement(self) -> None:
+        if self.cur_token.kind == 'TYPE':  # объвление переменной(ых)
+            self._handle_var_def()
+        elif self.cur_token.kind == 'NAME' and self.cur_token.value == 'вывод':
+            self._handle_output()
+        elif self.cur_token.kind == 'NAME':  # присваивание
+            name = self.cur_token.value
+            self._next_token()
+            if self.cur_token.kind == 'ASSIGN':
+                self._handle_var_assign(name)
+            else:
+                raise SyntaxException(self.line, self.cur_token.value)
         else:
-            self.cur_cls.names = (name,)
-            self.state = State.VAR_ASSIGN
+            raise SyntaxException(self.line, self.cur_token.value)
+
+    def _handle_var_def(self) -> None:
+        typename = self.cur_token.value
+        name_s: list[str] = []
+
+        self._next_token()
+        while self.cur_token.kind in ('NAME', 'COMMA'):
+            if self.cur_token.kind == 'NAME':
+                if self.cur_token.value in KEYWORDS:
+                    raise SyntaxException(self.line, self.cur_token.value, 'ключевое слово в имени')
+                name_s.append(self.cur_token.value)
+            self._next_token()
+
+        if self.cur_token.kind == 'ASSIGN':
+            expr = self._handle_expr()
+        elif self.cur_token.kind == 'EQ':
+            expr = self._handle_const_expr()
+            self._next_token()
+            if self.cur_token.kind != 'NEWLINE':
+                raise SyntaxException(self.line, self.cur_token.value, 'это не константа')
+        elif self.cur_token.kind == 'NEWLINE':
+            self.res.append(StoreVar(self.line, typename, tuple(name_s), None))
+            return
+        else:
+            raise SyntaxException(self.line, self.cur_token.value)
+
+        if len(name_s) > 1 and expr:
+            raise SyntaxException(self.line, ':=', 'здесь не должно быть ":-"')
+
+        self.res.append(StoreVar(self.line, typename, tuple(name_s), expr))
+
+        self._handle_newline()
     
-    def _handle_var_assign(self, tok_kind: str, tok_value: str) -> None:
-        if self.envs[-1] == Env.VAR_DEF:
-            if tok_kind == 'ASSIGN':
-                self.state = State.VAR_EXPR
-            elif tok_kind == 'EQ':
-                self.state = State.VAR_CONST_EXPR
-            elif tok_kind == 'COMMA':  # name, name
-                self.state = State.VAR_NAME
+    def _handle_var_assign(self, name: str) -> None:
+        self.res.append(StoreVar(self.line, None, (name,), self._handle_expr()))
+
+    def _handle_output(self) -> None:
+        exprs: list[list[ValueType | Op]] = [[]]
+
+        self._next_token()
+        while self.cur_token.kind in ('NUMBER', 'STRING', 'NAME', 'OP', 'COMMA'):
+            if self.cur_token.kind == 'COMMA':
+                exprs.append([])
             else:
-                raise SyntaxException(self.line, tok_value)
-        elif self.envs[-1] == Env.VAR_ASSIGN:
-            if tok_kind == 'ASSIGN':
-                self.state = State.VAR_EXPR
-            else:
-                raise SyntaxException(self.line, tok_value)
+                exprs[-1].append(self._get_val(self.cur_token.kind, self.cur_token.value))
+            self._next_token()
+        if self.cur_token.kind != 'NEWLINE' or exprs == [[]]:
+            raise SyntaxException(self.line, self.cur_token.value)
+
+        if not all(e for e in exprs):
+            raise SyntaxException(self.line, self.cur_token.value)
+        self.res.append(Output(self.line, [tuple(e) for e in exprs]))
+
+        self._handle_newline()
 
     def _handle_newline(self) -> None:
         """Обрабатывает конец строки."""
         self.line += 1
-        if self.state == State.VAR_EXPR:
-            if not self.cur_expr:
-                raise SyntaxException(self.line, '\n')
-            self.cur_cls.value = tuple(self.cur_expr)
-            self.res.append(self.cur_cls)
-        elif self.state == State.VAR_ASSIGN:  # объявление переменной без значения
-            self.res.append(self.cur_cls)
-        elif self.state == State.OUTPUT_EXPR:
-            if self.cur_expr:
-                self.cur_cls.exprs.append(tuple(self.cur_expr))
-                self.res.append(self.cur_cls)
+        if self.envs and self.envs[-1] not in (Env.INTRODUCTION, Env.MAIN):
+            self.envs.pop()
+
+    def _handle_expr(self) -> tuple[ValueType | Op]:
+        expr = []
+
+        self._next_token()
+        while self.cur_token.kind in ('STRING', 'NAME', 'NUMBER', 'OP'):
+            expr.append(self._get_val(self.cur_token.kind, self.cur_token.value))
+            self._next_token()
+        if self.cur_token.kind != 'NEWLINE' or not expr:
+            raise SyntaxException(self.line, self.cur_token.value)
+
+        return tuple(expr)
+
+    def _handle_const_expr(self) -> tuple[ValueType]:
+        self._next_token()
+        if self.cur_token.kind in ('STRING', 'NAME', 'NUMBER'):
+            return (self._get_val(self.cur_token.kind, self.cur_token.value),)
+        else:
+            raise SyntaxException(self.line, self.cur_token.value)
+
+    def _get_val(self, kind: str, value: str) -> ValueType | Op:
+        if kind == 'NUMBER':
+            if '.' in value:
+                return float(value)
             else:
-                raise SyntaxException(self.line, '\n')
-        elif self.state not in (State.NEWLINE, State.WAIT):
-            raise SyntaxException(self.line, '\n')
-        self.cur_cls = None
-        self.cur_expr.clear()
-        self.state = State.WAIT
-        self.envs.pop()
-
-    def _handle_expr(self, tok_kind: str, tok_value: str) -> None:
-        if tok_kind in ('STRING', 'NAME'):
-            self.cur_expr.append(tok_value)
-        elif tok_kind == 'NUMBER':
-            self.cur_expr.append(self._get_number(tok_value))
-        elif tok_kind == 'OP':
-            self.cur_expr.append(Op(tok_value))
+                return int(value)
+        elif kind == 'NAME' and value in ('да', 'нет'):
+            return value == 'да'
+        elif kind == 'OP':
+            return Op(value)
         else:
-            raise SyntaxException(self.line, tok_value)
-
-    def _handle_const_expr(self, tok_kind: str, tok_value: str) -> None:
-        if tok_kind in ('STRING', 'NAME'):
-            self.cur_cls.value = (tok_value,)
-        elif tok_kind == 'NUMBER':
-            self.cur_cls.value = (self._get_number(tok_value),)
-        else:
-            raise SyntaxException(self.line, tok_value)
-        self.res.append(self.cur_cls)
-        self.cur_cls = None
-        self.state = State.NEWLINE
-    
-    def _get_number(self, value: str) -> int | float:
-        if '.' in value:
-            return float(value)
-        else:
-            return int(value)
+            return value
 
 
 def improve(parsed_code: list) -> list:

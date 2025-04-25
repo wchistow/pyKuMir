@@ -22,3 +22,12 @@ class StoreVar(Statement):
 @dataclass
 class Op:
     op: str
+
+@dataclass
+class AlgStart(Statement):
+    is_main: bool
+    name: str = ''
+
+@dataclass
+class AlgEnd(Statement):
+    ...

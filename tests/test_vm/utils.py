@@ -9,5 +9,5 @@ from compiler import build_bytecode, Parser, improve
 
 
 def bc_from_source(code: str) -> list[tuple]:
-    parser = Parser()
-    return build_bytecode(improve(parser.parse(code)))
+    parser = Parser(code)
+    return build_bytecode(improve(parser.parse()))
