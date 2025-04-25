@@ -171,7 +171,7 @@ class Parser:
             raise SyntaxException(self.line, self.cur_token.value)
 
         if len(name_s) > 1 and expr:
-            raise SyntaxException(self.line, ':=', 'здесь не должно быть ":-"')
+            raise SyntaxException(self.line, ':=', 'здесь не должно быть ":="')
 
         self.res.append(StoreVar(self.line, typename, tuple(name_s), expr))
 
