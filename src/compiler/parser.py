@@ -66,9 +66,11 @@ class Parser:
         self.cur_token = Token(mo.lastgroup, mo.group())
         if self.cur_token.kind == 'SKIP':
             self._next_token()
+        elif self.cur_token.kind == 'NEWLINE':
+            self.line += 1
 
         if self.debug:
-            print(f'{self.cur_token.kind:10} {self.cur_token.value!r}')
+            print(f'{self.line} {self.cur_token.kind:10} {self.cur_token.value!r}')
 
     def parse(self) -> list[Statement]:
         try:
@@ -85,28 +87,23 @@ class Parser:
         while True:
             self._next_token()
 
-            if self.cur_token.kind == 'NEWLINE':
-                self._handle_newline()
-                continue
+            if self.envs:
+                if self.envs[-1] == Env.INTRODUCTION:
+                    if self.cur_token.value == 'алг':  # введение закончилось
+                        self.envs.pop()
+                        self.envs.append(Env.MAIN)
 
-            if self.envs[-1] == Env.INTRODUCTION:
-                if self.cur_token.value == 'алг':  # введение закончилось
-                    self.envs.pop()
-                    self.envs.append(Env.MAIN)
+                        self._handle_alg_header(is_main=True)
 
-                    self._handle_alg_header(is_main=True)
-
-                    self._was_alg = True
-                    continue
-            elif self.envs[-1] == Env.MAIN:
-                if self.cur_token.value == 'кон':
-                    self.res.append(AlgEnd())
-                    self.envs.pop()
-                    continue
+                        self._was_alg = True
+                        continue
+                elif self.envs[-1] == Env.MAIN:
+                    if self.cur_token.value == 'кон':
+                        self.res.append(AlgEnd())
+                        self.envs.pop()
+                        continue
 
             self._handle_statement()
-
-        self._handle_newline()
 
     def _handle_alg_header(self, is_main: bool):
         alg_name = []
@@ -142,7 +139,7 @@ class Parser:
                 self._handle_var_assign(name)
             else:
                 raise SyntaxException(self.line, self.cur_token.value)
-        else:
+        elif self.cur_token.kind != 'NEWLINE':
             raise SyntaxException(self.line, self.cur_token.value)
 
     def _handle_var_def(self) -> None:
@@ -157,15 +154,17 @@ class Parser:
                 name_s.append(self.cur_token.value)
             self._next_token()
 
-        if self.cur_token.kind == 'ASSIGN':
+        if self.cur_token.kind == 'ASSIGN' and Env.INTRODUCTION not in self.envs:
             expr = self._handle_expr()
         elif self.cur_token.kind == 'EQ':
             expr = self._handle_const_expr()
             self._next_token()
             if self.cur_token.kind != 'NEWLINE':
                 raise SyntaxException(self.line, self.cur_token.value, 'это не константа')
+            self.res.append(StoreVar(self.line - 1, typename, tuple(name_s), expr))
+            return
         elif self.cur_token.kind == 'NEWLINE':
-            self.res.append(StoreVar(self.line, typename, tuple(name_s), None))
+            self.res.append(StoreVar(self.line - 1, typename, tuple(name_s), None))
             return
         else:
             raise SyntaxException(self.line, self.cur_token.value)
@@ -175,10 +174,8 @@ class Parser:
 
         self.res.append(StoreVar(self.line, typename, tuple(name_s), expr))
 
-        self._handle_newline()
-    
     def _handle_var_assign(self, name: str) -> None:
-        self.res.append(StoreVar(self.line, None, (name,), self._handle_expr()))
+        self.res.append(StoreVar(self.line - 1, None, (name,), self._handle_expr()))
 
     def _handle_output(self) -> None:
         exprs: list[list[ValueType | Op]] = [[]]
@@ -195,15 +192,7 @@ class Parser:
 
         if not all(e for e in exprs):
             raise SyntaxException(self.line, self.cur_token.value)
-        self.res.append(Output(self.line, [tuple(e) for e in exprs]))
-
-        self._handle_newline()
-
-    def _handle_newline(self) -> None:
-        """Обрабатывает конец строки."""
-        self.line += 1
-        if self.envs and self.envs[-1] not in (Env.INTRODUCTION, Env.MAIN):
-            self.envs.pop()
+        self.res.append(Output(self.line - 1, [tuple(e) for e in exprs]))
 
     def _handle_expr(self) -> tuple[ValueType | Op]:
         expr = []

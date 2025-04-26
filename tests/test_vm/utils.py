@@ -11,3 +11,7 @@ from compiler import build_bytecode, Parser, improve
 def bc_from_source(code: str) -> list[tuple]:
     parser = Parser(code)
     return build_bytecode(improve(parser.parse()))
+
+
+def wrap_code_into_main(code: str) -> str:
+    return f'алг\nнач\n{code}\nкон'

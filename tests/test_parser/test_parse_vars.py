@@ -12,16 +12,16 @@ from compiler import SyntaxException, Parser
 
 
 def test_simple_var_def():
-    code = 'цел а := 2'
+    code = 'алг\nнач\n цел а := 2\nкон'
     parser = Parser(code)
     parsed = parser.parse()
-    assert parsed == [StoreVar(0, 'цел', ('а',), (2,))]
+    assert StoreVar(3, 'цел', ('а',), (2,)) in parsed
 
 def test_var_def_with_expr():
-    code = 'цел а := 2 + б'
+    code = 'алг\nнач\n цел а := 2 + б\nкон'
     parser = Parser(code)
     parsed = parser.parse()
-    assert parsed == [StoreVar(0, 'цел', ('а',), (2, Op(op='+'), 'б'))]
+    assert StoreVar(3, 'цел', ('а',), (2, Op(op='+'), 'б')) in parsed
 
 def test_single_var_declare():
     code = 'цел а'
@@ -44,12 +44,12 @@ def test_const():
 # --- тесты ошибок ---
 
 def test_keyword_in_name_error():
-    parser = Parser('цел нач := 0')
+    parser = Parser('алг\nнач\nцел нач := 0\nкон')
     with pytest.raises(SyntaxException):
         parser.parse()
 
 
 def test_two_vars_with_value_error():
-    parser = Parser('цел а, б := 2')
+    parser = Parser('алг\nнач\nцел а, б := 2\nкон')
     with pytest.raises(SyntaxException):
         parser.parse()
