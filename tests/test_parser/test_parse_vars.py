@@ -15,13 +15,13 @@ def test_simple_var_def():
     code = 'алг\nнач\n цел а := 2\nкон'
     parser = Parser(code)
     parsed = parser.parse()
-    assert StoreVar(3, 'цел', ('а',), (2,)) in parsed
+    assert StoreVar(2, 'цел', ('а',), (2,)) in parsed
 
 def test_var_def_with_expr():
     code = 'алг\nнач\n цел а := 2 + б\nкон'
     parser = Parser(code)
     parsed = parser.parse()
-    assert StoreVar(3, 'цел', ('а',), (2, Op(op='+'), 'б')) in parsed
+    assert StoreVar(2, 'цел', ('а',), (2, Op(op='+'), 'б')) in parsed
 
 def test_single_var_declare():
     code = 'цел а'

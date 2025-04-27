@@ -1,5 +1,7 @@
 from enum import Enum
 
+from .constants import ValueType
+
 
 class Bytecode(Enum):
     LOAD = 0x01
@@ -7,3 +9,8 @@ class Bytecode(Enum):
     BIN_OP = 0x03
     STORE = 0x04
     OUTPUT = 0x05
+    CALL = 0x06
+    RET = 0x07
+
+
+BytecodeType = tuple[int, Bytecode, tuple[ValueType | None | tuple[ValueType], ...]]

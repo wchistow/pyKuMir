@@ -66,7 +66,7 @@ class Parser:
         self.cur_token = Token(mo.lastgroup, mo.group())
         if self.cur_token.kind == 'SKIP':
             self._next_token()
-        elif self.cur_token.kind == 'NEWLINE':
+        if self.cur_token.kind == 'NEWLINE':
             self.line += 1
 
         if self.debug:
@@ -99,7 +99,7 @@ class Parser:
                         continue
                 elif self.envs[-1] == Env.MAIN:
                     if self.cur_token.value == 'кон':
-                        self.res.append(AlgEnd())
+                        self.res.append(AlgEnd(self.line))
                         self.envs.pop()
                         continue
 
@@ -172,7 +172,7 @@ class Parser:
         if len(name_s) > 1 and expr:
             raise SyntaxException(self.line, ':=', 'здесь не должно быть ":="')
 
-        self.res.append(StoreVar(self.line, typename, tuple(name_s), expr))
+        self.res.append(StoreVar(self.line - 1, typename, tuple(name_s), expr))
 
     def _handle_var_assign(self, name: str) -> None:
         self.res.append(StoreVar(self.line - 1, None, (name,), self._handle_expr()))

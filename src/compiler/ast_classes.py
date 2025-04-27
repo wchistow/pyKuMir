@@ -30,4 +30,4 @@ class AlgStart(Statement):
 
 @dataclass
 class AlgEnd(Statement):
-    ...
+    lineno: int

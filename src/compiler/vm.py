@@ -1,14 +1,8 @@
-from typing import Callable, NamedTuple, NoReturn
+from typing import Callable, NoReturn
 
-from .bytecode import Bytecode
+from .bytecode import Bytecode, BytecodeType
 from .constants import ValueType
 from .exceptions import SyntaxException, RuntimeException
-
-
-class Var(NamedTuple):
-    typename: str
-    name: str
-    value: ValueType | None
 
 
 class VM:
@@ -19,19 +13,32 @@ class VM:
             bool: 'лог'
     }
 
-    def __init__(self, output_f: Callable[[str], None]) -> None:
-        self.glob_vars: list[Var] = []
+    def __init__(self,
+                 bytecode: list[BytecodeType],
+                 output_f: Callable[[str], None],
+                 algs: dict[str, list[BytecodeType]] | None = None) -> None:
         self.output_f = output_f
-        
+        self.bytecode = bytecode
+        self.algs = algs or {}
+
+        self.glob_vars: dict[str, tuple[str, ValueType]] = {}
         self.stack: list[ValueType | None] = []
+
+        # Локальные переменные текущих функций
+        self.call_stack: list[dict[str, tuple[str, ValueType]]] = []
+        self.in_alg = False
 
     def reset(self) -> None:
         """Сбрасывает состояние виртуальной машины."""
         self.glob_vars.clear()
+        self.call_stack.clear()
         self.stack.clear()
 
-    def execute(self, bytecode: list[tuple]) -> None:
-        for inst in bytecode:
+    def execute(self) -> None:
+        self._execute(self.bytecode)
+
+    def _execute(self, bc: list[BytecodeType]) -> None:
+        for inst in bc:
             if inst[1] == Bytecode.LOAD:
                 self.stack.append(inst[2][0])
             elif inst[1] == Bytecode.LOAD_NAME:
@@ -41,7 +48,12 @@ class VM:
             elif inst[1] == Bytecode.STORE:
                 self.store_var(inst[0], inst[2][0], inst[2][1])
             elif inst[1] == Bytecode.OUTPUT:
-                self.output(inst[0], inst[2][0])
+                self.output(inst[2][0])
+            elif inst[1] == Bytecode.CALL:
+                self.call(inst[0], inst[2][0])
+            elif inst[1] == Bytecode.RET:
+                self.call_stack.pop()
+                return
 
     def store_var(self, lineno: int, typename: str | None, names: tuple[str]) -> None:
         """Обрабатывает инструкцию STORE"""
@@ -49,11 +61,10 @@ class VM:
         if len(names) > 1 and value is not None:
             raise SyntaxException(lineno, message='при нескольких переменных нельзя указывать значение')
         if typename is None:  # сохранение значения в уже объявленную переменную
-            var_i = self._var_defined(names[0])
-            if var_i == -1:
+            if not self._var_defined(names[0]):
                 raise RuntimeException(lineno, f'имя "{names[0]}" не объявлено')
-            var = self.glob_vars.pop(var_i)
-            self._save_var(lineno, var.typename, var.name, value)
+            var = (self.call_stack[-1] if self.in_alg else self.glob_vars)[names[0]]
+            self._save_var(lineno, var[0], names[0], value)
             return
         if len(names) == 1:
             self._save_var(lineno, typename, names[0], value)
@@ -67,44 +78,65 @@ class VM:
         self._check_type_is_eq(lineno, a, b, op)
         self.stack.append(eval(f'{b} {op} {a}'))
 
-    def output(self, lineno: int, exprs_num: int) -> None:
+    def output(self, exprs_num: int) -> None:
         res: list[str] = []
         for _ in range(exprs_num):
             res.append(str(self.stack.pop()))
         self.output_f(''.join(res[::-1]))
+
+    def call(self, lineno: int, name: str) -> None:
+        if name in self.algs:
+            self.in_alg = True
+            self.call_stack.append({})
+            self._execute(self.algs[name])
+        else:
+            raise RuntimeException(lineno, f'имя {name} не определено')
 
     def _save_var(self, lineno: int, typename: str, name: str, value: ValueType | None) -> None:
         """
         Создаёт переменную типа `typename` с именем `name`
         и значением `value` (`None` - объявлена, но не определена).
         """
+        namespace = self.call_stack[-1] if self.in_alg else self.glob_vars
         if value is None:
-            self.glob_vars.append(Var(typename, name, None))
+            namespace[name] = (typename, None)
             return
         value_type = self.TYPES[type(value)]
         if value_type == typename:  # типы целевой переменной и значения совпадают
-            self.glob_vars.append(Var(typename, name, value))
+            namespace[name] = (typename, value)
         else:
             raise RuntimeException(lineno, message=f'нельзя "{typename} := {value_type}"')
 
     def get_var(self, lineno: int, name: str) -> ValueType | NoReturn:
-        if name == 'нс':
-            return '\n'
-        for var in self.glob_vars:
-            if var.name == name:
-                if var.value is None:
-                    raise RuntimeException(lineno, 'нет значения у величины.')
-                return var.value
+        if self.in_alg:
+            var = self._find_var(lineno, name, self.call_stack[-1])
+            if var is not None:
+                return var
+        var = self._find_var(lineno, name, self.glob_vars)
+        if var is not None:
+            return var
         raise RuntimeException(lineno, 'имя не объявлено')
 
-    def _var_defined(self, name: str) -> int:
+    def _find_var(self, lineno: int, name: str, namespace: dict) -> ValueType | None | NoReturn:
+        if name == 'нс':
+            return '\n'
+        if name not in namespace:
+            return None
+        var = namespace[name]
+        if var is None:
+            raise RuntimeException(lineno, 'нет значения у величины')
+        return var[1]
+
+    def _var_defined(self, name: str) -> bool:
         """
-        Возвращает индекс переменой с именем `name` в списке `self.glob_vars`. Если такой нет, возвращает -1.
+        Возвращает индекс переменой с именем `name` в списке `self.glob_vars`.
+        Если такой нет, возвращает -1.
         """
-        for i, var in enumerate(self.glob_vars):
-            if var.name == name:
-                return i
-        return -1
+        if name in self.glob_vars:
+            return True
+        if self.in_alg and name in self.call_stack[-1]:
+            return True
+        return False
 
     def _check_type_is_eq(self, lineno: int, a: ValueType, b: ValueType, op: str) -> None:
         a_type = self.TYPES[type(a)]

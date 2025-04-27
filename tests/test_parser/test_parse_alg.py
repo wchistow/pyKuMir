@@ -20,7 +20,8 @@ def test_parse_simple_alg():
     parser = Parser(code)
     parsed2 = parser.parse()
 
-    assert parsed1 == parsed2 == [AlgStart(is_main=True, name=''), AlgEnd()]
+    assert parsed1 == [AlgStart(is_main=True, name=''), AlgEnd(2)]
+    assert parsed2 == [AlgStart(is_main=True, name=''), AlgEnd(0)]
 
 
 def test_without_нач_error():
