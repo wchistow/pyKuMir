@@ -8,9 +8,9 @@ PATH_TO_SRC = Path(__file__).parent.parent.parent.absolute() / 'src'
 
 sys.path.append(str(PATH_TO_SRC.absolute()))
 
-compiler = importlib.import_module('compiler')
-Parser, SyntaxException = compiler.Parser, compiler.SyntaxException
-ast_classes = compiler.ast_classes
+interpreter = importlib.import_module('interpreter')
+Parser, SyntaxException = interpreter.Parser, interpreter.SyntaxException
+ast_classes = interpreter.ast_classes
 
 
 def test_parse_simple_alg():

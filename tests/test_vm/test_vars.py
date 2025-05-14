@@ -10,8 +10,8 @@ PATH_TO_SRC = Path(__file__).parent.parent.parent.absolute() / 'src'
 
 sys.path.append(str(PATH_TO_SRC.absolute()))
 
-compiler = importlib.import_module('compiler')
-code2bc, RuntimeException, VM = compiler.code2bc, compiler.RuntimeException, compiler.VM
+interpreter = importlib.import_module('interpreter')
+code2bc, RuntimeException, VM = interpreter.code2bc, interpreter.RuntimeException, interpreter.VM
 
 
 printed_text = ''
