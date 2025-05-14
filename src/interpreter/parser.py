@@ -209,7 +209,6 @@ class Parser:
             else:
                 exprs[-1].append(_get_val(self.cur_token.kind, self.cur_token.value))
             self._next_token()
-            print(self.cur_token)
         if self.cur_token.kind != 'NEWLINE' or exprs == [[]]:
             raise SyntaxException(self.line, self.cur_token.value)
 
