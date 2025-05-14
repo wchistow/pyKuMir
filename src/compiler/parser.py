@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import re
 from typing import Iterable
 
-from .ast_classes import AlgStart, AlgEnd, Statement, StoreVar, Op, Output
+from .ast_classes import AlgStart, AlgEnd, Statement, StoreVar, Op, Output, Call
 from .constants import KEYWORDS, TYPES, ValueType
 from .exceptions import SyntaxException
 
@@ -34,7 +34,7 @@ class Env(Enum):
     """Окружение, в котором мы сейчас находимся."""
     INTRODUCTION = auto()
     MAIN = auto()
-    ALG_HEADER = auto()
+    ALG = auto()
 
 
 class Parser:
@@ -47,7 +47,6 @@ class Parser:
         self.cur_cls: Statement | None = None
         self.res: list[Statement] = []
 
-        # на будущее, для других алгоритмов
         self._was_alg = False
 
         self.tokens = re.finditer(TOK_REGEX, code+'\n')
@@ -66,6 +65,7 @@ class Parser:
         self.cur_token = Token(mo.lastgroup, mo.group())
         if self.cur_token.kind == 'SKIP':
             self._next_token()
+            return
         if self.cur_token.kind == 'NEWLINE':
             self.line += 1
 
@@ -85,6 +85,10 @@ class Parser:
 
     def _parse(self) -> None:
         while True:
+            if self.envs and self.envs[-1] in (Env.MAIN, Env.ALG) and self.cur_token.value == 'кон':
+                self.res.append(AlgEnd(self.line))
+                self.envs.pop()
+
             self._next_token()
 
             if self.envs:
@@ -97,46 +101,61 @@ class Parser:
 
                         self._was_alg = True
                         continue
-                elif self.envs[-1] == Env.MAIN:
+                elif self.envs[-1] in (Env.MAIN, Env.ALG):
                     if self.cur_token.value == 'кон':
                         self.res.append(AlgEnd(self.line))
                         self.envs.pop()
                         continue
 
+            if self.cur_token.value == 'алг':
+                self.envs.append(Env.ALG)
+                self._handle_alg_header(is_main=False)
+                continue
+
             self._handle_statement()
 
     def _handle_alg_header(self, is_main: bool):
-        alg_name = []
+        self._next_token()
+
+        alg_name = self._handle_alg_name()
 
         self._next_token()
-        if self.cur_token.kind == 'NAME':
-            if self.cur_token.value == 'нач':
-                self.res.append(AlgStart(is_main=is_main, name=''))
-                return
+
+        self.res.append(AlgStart(self.line - 1 if self.line > 0 else self.line, is_main=is_main, name=alg_name))
+
+    def _handle_alg_name(self) -> str:
+        alg_name = []
+        if self.cur_token.kind == 'NAME' and self.cur_token.value != 'нач':
             alg_name.append(self.cur_token.value)
+            self._next_token()
+        while self.cur_token.kind in ('NAME', 'TYPE', 'NUMBER') and self.cur_token.value != 'нач':
+            alg_name.append(self.cur_token.value)
+            self._next_token()
+        while self.cur_token.kind == 'NEWLINE':
+            self._next_token()
+
+        if not alg_name and self._was_alg:
+            raise SyntaxException(self.line-1, 'алг', 'Не указано имя')
+
+        if self.cur_token.value == 'нач':
+            return ' '.join(alg_name)
         elif self.cur_token.kind != 'NEWLINE':
             raise SyntaxException(self.line, self.cur_token.value)
-        self._next_token()
-        while (self.cur_token.kind in ('NAME', 'NUMBER', 'TYPE')
-                    and self.cur_token.value != 'нач'):
-            if self.cur_token.kind == 'NAME':
-                alg_name.append(self.cur_token.value)
-            self._next_token()
-        if self.cur_token.value != 'нач':
-            raise SyntaxException(self.line, self.cur_token.value, 'после "алг" нет "нач"')
 
-        self.res.append(AlgStart(is_main=is_main, name=' '.join(alg_name)))
+        return ' '.join(alg_name)
 
     def _handle_statement(self) -> None:
-        if self.cur_token.kind == 'TYPE':  # объвление переменной(ых)
+        if self.cur_token.kind == 'TYPE':  # объявление переменной(ых)
             self._handle_var_def()
         elif self.cur_token.kind == 'NAME' and self.cur_token.value == 'вывод':
             self._handle_output()
-        elif self.cur_token.kind == 'NAME':  # присваивание
+        elif self.cur_token.kind == 'NAME':
             name = self.cur_token.value
             self._next_token()
-            if self.cur_token.kind == 'ASSIGN':
+            if self.cur_token.kind == 'ASSIGN':  # присваивание
                 self._handle_var_assign(name)
+            elif self.cur_token.kind == 'NEWLINE':  # вызов процедуры
+                self.res.append(Call(self.line - 1, name))
             else:
                 raise SyntaxException(self.line, self.cur_token.value)
         elif self.cur_token.kind != 'NEWLINE':
@@ -154,7 +173,7 @@ class Parser:
                 name_s.append(self.cur_token.value)
             self._next_token()
 
-        if self.cur_token.kind == 'ASSIGN' and Env.INTRODUCTION not in self.envs:
+        if self.cur_token.kind == 'ASSIGN':
             expr = self._handle_expr()
         elif self.cur_token.kind == 'EQ':
             expr = self._handle_const_expr()

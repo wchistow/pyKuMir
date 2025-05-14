@@ -63,7 +63,7 @@ class VM:
         if typename is None:  # сохранение значения в уже объявленную переменную
             if not self._var_defined(names[0]):
                 raise RuntimeException(lineno, f'имя "{names[0]}" не объявлено')
-            var = (self.call_stack[-1] if self.in_alg else self.glob_vars)[names[0]]
+            var = self._get_all_namespaces()[names[0]]
             self._save_var(lineno, var[0], names[0], value)
             return
         if len(names) == 1:
@@ -108,11 +108,7 @@ class VM:
             raise RuntimeException(lineno, message=f'нельзя "{typename} := {value_type}"')
 
     def get_var(self, lineno: int, name: str) -> ValueType | NoReturn:
-        if self.in_alg:
-            var = self._find_var(lineno, name, self.call_stack[-1])
-            if var is not None:
-                return var
-        var = self._find_var(lineno, name, self.glob_vars)
+        var = self._find_var(lineno, name, self._get_all_namespaces())
         if var is not None:
             return var
         raise RuntimeException(lineno, 'имя не объявлено')
@@ -129,12 +125,10 @@ class VM:
 
     def _var_defined(self, name: str) -> bool:
         """
-        Возвращает индекс переменой с именем `name` в списке `self.glob_vars`.
+        Возвращает индекс переменой с именем `name`.
         Если такой нет, возвращает -1.
         """
-        if name in self.glob_vars:
-            return True
-        if self.in_alg and name in self.call_stack[-1]:
+        if name in self._get_all_namespaces():
             return True
         return False
 
@@ -143,3 +137,10 @@ class VM:
         b_type = self.TYPES[type(b)]
         if a_type != b_type:
             raise RuntimeException(lineno, f'нельзя "{b_type} {op} {a_type}"')
+
+    def _get_all_namespaces(self) -> dict:
+        res = {}
+        res |= self.glob_vars
+        for alg_ns in self.call_stack:
+            res |= alg_ns
+        return res

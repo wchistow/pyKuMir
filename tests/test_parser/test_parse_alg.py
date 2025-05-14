@@ -1,3 +1,4 @@
+import importlib
 from pathlib import Path
 import sys
 
@@ -7,8 +8,9 @@ PATH_TO_SRC = Path(__file__).parent.parent.parent.absolute() / 'src'
 
 sys.path.append(str(PATH_TO_SRC.absolute()))
 
-from compiler.ast_classes import AlgStart, AlgEnd
-from compiler import SyntaxException, Parser
+compiler = importlib.import_module('compiler')
+Parser, SyntaxException = compiler.Parser, compiler.SyntaxException
+ast_classes = compiler.ast_classes
 
 
 def test_parse_simple_alg():
@@ -20,8 +22,70 @@ def test_parse_simple_alg():
     parser = Parser(code)
     parsed2 = parser.parse()
 
-    assert parsed1 == [AlgStart(is_main=True, name=''), AlgEnd(2)]
-    assert parsed2 == [AlgStart(is_main=True, name=''), AlgEnd(0)]
+    assert parsed1 == [ast_classes.AlgStart(1, is_main=True, name=''), ast_classes.AlgEnd(2)]
+    assert parsed2 == [ast_classes.AlgStart(0, is_main=True, name=''), ast_classes.AlgEnd(0)]
+
+
+def test_parse_alg_with_name():
+    code = '''алг тест
+    нач
+    кон
+    '''
+    parser = Parser(code)
+    parsed = parser.parse()
+    assert parsed == [ast_classes.AlgStart(1, is_main=True, name='тест'), ast_classes.AlgEnd(2)]
+
+
+def test_parse_two_algs():
+    code = '''алг тест1
+    нач
+    кон
+    
+    алг тест2
+    нач
+    кон
+    '''
+    parser = Parser(code)
+    parsed = parser.parse()
+    assert parsed == [
+        ast_classes.AlgStart(1, is_main=True, name='тест1'),
+        ast_classes.AlgEnd(2),
+        ast_classes.AlgStart(5, is_main=False, name='тест2'),
+        ast_classes.AlgEnd(6)
+    ]
+
+
+def test_parse_call():
+    code = '''алг
+    нач
+        приветствие
+    кон
+    
+    алг приветствие
+    нач
+        вывод "привет"
+    кон
+    '''
+    parser = Parser(code)
+    parsed = parser.parse()
+    assert parsed == [
+        ast_classes.AlgStart(1, is_main=True, name=''),
+        ast_classes.Call(2, alg_name='приветствие'),
+        ast_classes.AlgEnd(3),
+        ast_classes.AlgStart(6, is_main=False, name='приветствие'),
+        ast_classes.Output(7, exprs=[('"привет"',)]),
+        ast_classes.AlgEnd(8)
+    ]
+
+
+def test_parse_alg_with_space_in_name():
+    code = '''алг раз два
+    нач
+    кон
+    '''
+    parser = Parser(code)
+    parsed = parser.parse()
+    assert parsed == [ast_classes.AlgStart(1, is_main=True, name='раз два'), ast_classes.AlgEnd(2)]
 
 
 def test_without_нач_error():
@@ -30,7 +94,7 @@ def test_without_нач_error():
     кон'''
     parser = Parser(code)
     with pytest.raises(SyntaxException):
-        parsed = parser.parse()
+        parser.parse()
 
 
 def test_without_кон_error():
@@ -39,4 +103,20 @@ def test_without_кон_error():
     цел а := 5'''
     parser = Parser(code)
     with pytest.raises(SyntaxException):
-        parsed = parser.parse()
+        parser.parse()
+
+
+def test_not_first_without_name():
+    code = '''алг тест
+    нач
+      вывод 5
+    кон
+    
+    алг
+    нач
+    вывод 10
+    кон
+    '''
+    parser = Parser(code)
+    with pytest.raises(SyntaxException):
+        parser.parse()

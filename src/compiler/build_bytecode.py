@@ -1,4 +1,4 @@
-from .ast_classes import StoreVar, Output, Op, AlgStart, AlgEnd
+from .ast_classes import StoreVar, Output, Op, AlgStart, AlgEnd, Call
 from .bytecode import Bytecode, BytecodeType
 from .constants import ValueType
 
@@ -32,9 +32,10 @@ def build_bytecode(parsed_code: list) -> tuple[list[BytecodeType], dict]:
         elif isinstance(stmt, AlgEnd):
             cur_ns.append((stmt.lineno, Bytecode.RET, ()))
             cur_alg = None
+        elif isinstance(stmt, Call):
+            cur_ns.append((stmt.lineno, Bytecode.CALL, (stmt.alg_name,)))
 
-        if hasattr(stmt, 'lineno'):
-            last_line = stmt.lineno
+        last_line = stmt.lineno
 
     if main_alg is not None:
         bytecode.append((last_line, Bytecode.CALL, (main_alg,)))

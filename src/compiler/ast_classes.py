@@ -25,9 +25,15 @@ class Op:
 
 @dataclass
 class AlgStart(Statement):
+    lineno: int
     is_main: bool
     name: str = ''
 
 @dataclass
 class AlgEnd(Statement):
     lineno: int
+
+@dataclass
+class Call(Statement):
+    lineno: int
+    alg_name: str
