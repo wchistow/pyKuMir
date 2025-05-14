@@ -42,9 +42,9 @@ def build_bytecode(parsed_code: list) -> tuple[list[BytecodeType], dict]:
     return bytecode, algs
 
 
-def _expr_bc(lineno: int, expr: tuple[ValueType | Op]) -> list[BytecodeType]:
+def _expr_bc(lineno: int, expr: list[ValueType | Op]) -> list[BytecodeType]:
     """
-    Превращает обратную польскую запись вида `(2, 3, Op(op='+'))` в набор команд байткода, например:
+    Превращает обратную польскую запись вида `(2, 3, Op(op='+'))` в набор команд байт-кода, например:
     ```
     LOAD 2
     LOAD 3
@@ -66,7 +66,7 @@ def _expr_bc(lineno: int, expr: tuple[ValueType | Op]) -> list[BytecodeType]:
 
 def pretty_print_bc(bc: list[BytecodeType], indent: int = 0) -> None:
     """
-    Печатает переданный байткод в формате:
+    Печатает переданный байт-код в формате:
     ```
      <номер строки>  <команда> <аргументы>
     ```

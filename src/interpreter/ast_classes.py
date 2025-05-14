@@ -1,8 +1,9 @@
 from dataclasses import dataclass
-from typing import Optional, Union
+from typing import Optional, Union, TypeAlias
 
 from .constants import ValueType
 
+Expr: TypeAlias = list[Union[ValueType, 'Op']]
 
 class Statement: ...
 
@@ -10,14 +11,14 @@ class Statement: ...
 @dataclass
 class Output(Statement):
     lineno: int
-    exprs: list[tuple[Union[ValueType, 'Op']]]
+    exprs: list[Expr]
 
 @dataclass
 class StoreVar(Statement):
     lineno: int
     typename: str | None  # `None` - если переменная уже объявлена (`а := 5`)
-    names: tuple[str]
-    value: Optional[tuple[Union[ValueType, 'Op']]] = None
+    names: list[str]
+    value: Optional[Expr] = None
 
 @dataclass
 class Op:

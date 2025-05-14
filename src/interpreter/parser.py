@@ -180,10 +180,10 @@ class Parser:
             self._next_token()
             if self.cur_token.kind != 'NEWLINE':
                 raise SyntaxException(self.line, self.cur_token.value, 'это не константа')
-            self.res.append(StoreVar(self.line - 1, typename, tuple(name_s), expr))
+            self.res.append(StoreVar(self.line - 1, typename, name_s, expr))
             return
         elif self.cur_token.kind == 'NEWLINE':
-            self.res.append(StoreVar(self.line - 1, typename, tuple(name_s), None))
+            self.res.append(StoreVar(self.line - 1, typename, name_s, None))
             return
         else:
             raise SyntaxException(self.line, self.cur_token.value)
@@ -191,10 +191,10 @@ class Parser:
         if len(name_s) > 1 and expr:
             raise SyntaxException(self.line, ':=', 'здесь не должно быть ":="')
 
-        self.res.append(StoreVar(self.line - 1, typename, tuple(name_s), expr))
+        self.res.append(StoreVar(self.line - 1, typename, name_s, expr))
 
     def _handle_var_assign(self, name: str) -> None:
-        self.res.append(StoreVar(self.line - 1, None, (name,), self._handle_expr()))
+        self.res.append(StoreVar(self.line - 1, None, [name], self._handle_expr()))
 
     def _handle_output(self) -> None:
         exprs: list[list[ValueType | Op]] = [[]]
@@ -204,46 +204,53 @@ class Parser:
             if self.cur_token.kind == 'COMMA':
                 exprs.append([])
             else:
-                exprs[-1].append(self._get_val(self.cur_token.kind, self.cur_token.value))
+                exprs[-1].append(_get_val(self.cur_token.kind, self.cur_token.value))
             self._next_token()
         if self.cur_token.kind != 'NEWLINE' or exprs == [[]]:
             raise SyntaxException(self.line, self.cur_token.value)
 
         if not all(e for e in exprs):
             raise SyntaxException(self.line, self.cur_token.value)
-        self.res.append(Output(self.line - 1, [tuple(e) for e in exprs]))
+        self.res.append(Output(self.line - 1, exprs))
 
-    def _handle_expr(self) -> tuple[ValueType | Op]:
+    def _handle_expr(self) -> list[ValueType | Op]:
         expr = []
 
         self._next_token()
         while self.cur_token.kind in ('STRING', 'NAME', 'NUMBER', 'OP'):
-            expr.append(self._get_val(self.cur_token.kind, self.cur_token.value))
+            expr.append(_get_val(self.cur_token.kind, self.cur_token.value))
             self._next_token()
         if self.cur_token.kind != 'NEWLINE' or not expr:
             raise SyntaxException(self.line, self.cur_token.value)
 
-        return tuple(expr)
+        return expr
 
-    def _handle_const_expr(self) -> tuple[ValueType]:
+    def _handle_const_expr(self) -> list[ValueType]:
         self._next_token()
         if self.cur_token.kind in ('STRING', 'NAME', 'NUMBER'):
-            return (self._get_val(self.cur_token.kind, self.cur_token.value),)
+            return [_get_val(self.cur_token.kind, self.cur_token.value)]
         else:
             raise SyntaxException(self.line, self.cur_token.value)
 
-    def _get_val(self, kind: str, value: str) -> ValueType | Op:
-        if kind == 'NUMBER':
-            if '.' in value:
-                return float(value)
-            else:
-                return int(value)
-        elif kind == 'NAME' and value in ('да', 'нет'):
-            return value == 'да'
-        elif kind == 'OP':
-            return Op(value)
+
+def _get_val(kind: str, value: str) -> ValueType | Op:
+    """
+    Преобразует значение `value` из `str` в тип `kind`, например:
+     + `_get_val('NUMBER', '5')` -> `5`
+     + `_get_val('NAME' 'да')` -> `True`
+     + `_get_val('OP', '+')` -> `Op('+')`
+    """
+    if kind == 'NUMBER':
+        if '.' in value:
+            return float(value)
         else:
-            return value
+            return int(value)
+    elif kind == 'NAME' and value in ('да', 'нет'):
+        return value == 'да'
+    elif kind == 'OP':
+        return Op(value)
+    else:
+        return value
 
 
 def improve(parsed_code: list) -> list:
@@ -263,7 +270,7 @@ def _get_priority(op: Op) -> int:
     return 0
 
 
-def _to_reverse_polish(expr: Iterable[ValueType | Op]) -> tuple:
+def _to_reverse_polish(expr: Iterable[ValueType | Op]) -> list[ValueType | Op]:
     """Выражение -> обратная польская запись."""
     notation: list[ValueType | Op] = []
     operator_stack: list[Op] = []
@@ -302,4 +309,4 @@ def _to_reverse_polish(expr: Iterable[ValueType | Op]) -> tuple:
                 notation.append(token)
     for op in operator_stack[::-1]:
         notation.append(Op(op.op))
-    return tuple(notation)
+    return notation

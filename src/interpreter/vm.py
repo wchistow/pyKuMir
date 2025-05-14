@@ -1,8 +1,10 @@
-from typing import Callable, NoReturn
+from typing import Callable, NoReturn, TypeAlias
 
 from .bytecode import Bytecode, BytecodeType
 from .constants import ValueType
 from .exceptions import SyntaxException, RuntimeException
+
+Namespace: TypeAlias = dict[str, tuple[str, ValueType | None]]
 
 
 class VM:
@@ -21,11 +23,11 @@ class VM:
         self.bytecode = bytecode
         self.algs = algs or {}
 
-        self.glob_vars: dict[str, tuple[str, ValueType]] = {}
+        self.glob_vars: Namespace = {}
         self.stack: list[ValueType | None] = []
 
         # Локальные переменные текущих функций
-        self.call_stack: list[dict[str, tuple[str, ValueType]]] = []
+        self.call_stack: list[Namespace] = []
         self.in_alg = False
 
     def reset(self) -> None:
@@ -108,20 +110,10 @@ class VM:
             raise RuntimeException(lineno, message=f'нельзя "{typename} := {value_type}"')
 
     def get_var(self, lineno: int, name: str) -> ValueType | NoReturn:
-        var = self._find_var(lineno, name, self._get_all_namespaces())
+        var = _find_var_in_namespace(lineno, name, self._get_all_namespaces())
         if var is not None:
             return var
         raise RuntimeException(lineno, 'имя не объявлено')
-
-    def _find_var(self, lineno: int, name: str, namespace: dict) -> ValueType | None | NoReturn:
-        if name == 'нс':
-            return '\n'
-        if name not in namespace:
-            return None
-        var = namespace[name]
-        if var is None:
-            raise RuntimeException(lineno, 'нет значения у величины')
-        return var[1]
 
     def _var_defined(self, name: str) -> bool:
         """
@@ -138,9 +130,20 @@ class VM:
         if a_type != b_type:
             raise RuntimeException(lineno, f'нельзя "{b_type} {op} {a_type}"')
 
-    def _get_all_namespaces(self) -> dict:
-        res = {}
+    def _get_all_namespaces(self) -> Namespace:
+        res: Namespace = {}
         res |= self.glob_vars
         for alg_ns in self.call_stack:
             res |= alg_ns
         return res
+
+
+def _find_var_in_namespace(lineno: int, name: str, namespace: dict) -> ValueType | None | NoReturn:
+    if name == 'нс':
+        return '\n'
+    if name not in namespace:
+        return None
+    var = namespace[name]
+    if var is None:
+        raise RuntimeException(lineno, 'нет значения у величины')
+    return var[1]
