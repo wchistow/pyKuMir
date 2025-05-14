@@ -9,7 +9,7 @@ PATH_TO_SRC = Path(__file__).parent.parent.parent.absolute() / 'src'
 sys.path.append(str(PATH_TO_SRC.absolute()))
 
 interpreter = importlib.import_module('interpreter')
-Parser, SyntaxException = interpreter.Parser, interpreter.SyntaxException
+Parser, SyntaxException, Value = interpreter.Parser, interpreter.SyntaxException, interpreter.value.Value
 ast_classes = interpreter.ast_classes
 
 
@@ -73,7 +73,7 @@ def test_parse_call():
         ast_classes.Call(2, alg_name='приветствие'),
         ast_classes.AlgEnd(3),
         ast_classes.AlgStart(6, is_main=False, name='приветствие'),
-        ast_classes.Output(7, exprs=[('"привет"',)]),
+        ast_classes.Output(7, exprs=[[Value('лит', 'привет')]]),
         ast_classes.AlgEnd(8)
     ]
 

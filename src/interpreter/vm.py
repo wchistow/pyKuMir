@@ -1,20 +1,13 @@
 from typing import Callable, NoReturn, TypeAlias
 
 from .bytecode import Bytecode, BytecodeType
-from .constants import ValueType
 from .exceptions import SyntaxException, RuntimeException
+from .value import Value
 
-Namespace: TypeAlias = dict[str, tuple[str, ValueType | None]]
+Namespace: TypeAlias = dict[str, tuple[str, Value | None]]
 
 
 class VM:
-    TYPES = {
-            int: 'цел',
-            float: 'вещ',
-            str: 'лит',
-            bool: 'лог'
-    }
-
     def __init__(self,
                  bytecode: list[BytecodeType],
                  output_f: Callable[[str], None],
@@ -24,7 +17,7 @@ class VM:
         self.algs = algs or {}
 
         self.glob_vars: Namespace = {}
-        self.stack: list[ValueType | None] = []
+        self.stack: list[Value | None] = []
 
         # Локальные переменные текущих функций
         self.call_stack: list[Namespace] = []
@@ -77,13 +70,29 @@ class VM:
     def bin_op(self, lineno: int, op: str) -> None:
         a = self.stack.pop()
         b = self.stack.pop()
-        self._check_type_is_eq(lineno, a, b, op)
-        self.stack.append(eval(f'{b} {op} {a}'))
+        typename = a.typename
+        if sorted((a.typename, b.typename)) == ['вещ', 'цел']:
+            typename = 'вещ'
+        elif a.typename != b.typename:
+            raise RuntimeException(lineno, f'нельзя "{b.typename} {op} {a.typename}"')
+
+        if op == '+' and a.typename in ('цел', 'вещ', 'лит'):
+            self.stack.append(Value(typename, b.value + a.value))
+        elif op == '+' and a.typename == 'сим':
+            self.stack.append(Value('лит', b.value + a.value))
+        elif op == '-' and a.typename in ('цел', 'вещ'):
+            self.stack.append(Value(typename, b.value - a.value))
+        elif op == '*' and a.typename in ('цел', 'вещ'):
+            self.stack.append(Value(typename, b.value * a.value))
+        elif op == '/' and a.typename in ('цел', 'вещ'):
+            self.stack.append(Value(typename, b.value / a.value))
+        elif op == '**' and a.typename in ('цел', 'вещ'):
+            self.stack.append(Value(typename, b.value ** a.value))
 
     def output(self, exprs_num: int) -> None:
         res: list[str] = []
         for _ in range(exprs_num):
-            res.append(str(self.stack.pop()))
+            res.append(str(self.stack.pop().value))
         self.output_f(''.join(res[::-1]))
 
     def call(self, lineno: int, name: str) -> None:
@@ -94,7 +103,7 @@ class VM:
         else:
             raise RuntimeException(lineno, f'имя {name} не определено')
 
-    def _save_var(self, lineno: int, typename: str, name: str, value: ValueType | None) -> None:
+    def _save_var(self, lineno: int, typename: str, name: str, value: Value | None) -> None:
         """
         Создаёт переменную типа `typename` с именем `name`
         и значением `value` (`None` - объявлена, но не определена).
@@ -103,13 +112,13 @@ class VM:
         if value is None:
             namespace[name] = (typename, None)
             return
-        value_type = self.TYPES[type(value)]
+        value_type = value.typename
         if value_type == typename:  # типы целевой переменной и значения совпадают
             namespace[name] = (typename, value)
         else:
             raise RuntimeException(lineno, message=f'нельзя "{typename} := {value_type}"')
 
-    def get_var(self, lineno: int, name: str) -> ValueType | NoReturn:
+    def get_var(self, lineno: int, name: str) -> Value | NoReturn:
         var = _find_var_in_namespace(lineno, name, self._get_all_namespaces())
         if var is not None:
             return var
@@ -124,12 +133,6 @@ class VM:
             return True
         return False
 
-    def _check_type_is_eq(self, lineno: int, a: ValueType, b: ValueType, op: str) -> None:
-        a_type = self.TYPES[type(a)]
-        b_type = self.TYPES[type(b)]
-        if a_type != b_type:
-            raise RuntimeException(lineno, f'нельзя "{b_type} {op} {a_type}"')
-
     def _get_all_namespaces(self) -> Namespace:
         res: Namespace = {}
         res |= self.glob_vars
@@ -138,9 +141,9 @@ class VM:
         return res
 
 
-def _find_var_in_namespace(lineno: int, name: str, namespace: dict) -> ValueType | None | NoReturn:
+def _find_var_in_namespace(lineno: int, name: str, namespace: dict) -> Value | None:
     if name == 'нс':
-        return '\n'
+        return Value('лит', '\n')
     if name not in namespace:
         return None
     var = namespace[name]

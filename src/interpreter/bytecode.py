@@ -1,6 +1,6 @@
 from enum import Enum
 
-from .constants import ValueType
+from .value import Value
 
 
 class Bytecode(Enum):
@@ -13,4 +13,4 @@ class Bytecode(Enum):
     RET = 0x07
 
 
-BytecodeType = tuple[int, Bytecode, tuple[ValueType | None | tuple[ValueType], ...]]
+BytecodeType = tuple[int, Bytecode, tuple[Value | None | tuple[Value], ...]]

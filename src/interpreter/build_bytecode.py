@@ -1,6 +1,6 @@
 from .ast_classes import StoreVar, Output, Op, AlgStart, AlgEnd, Call
 from .bytecode import Bytecode, BytecodeType
-from .constants import ValueType
+from .value import Value
 
 
 def build_bytecode(parsed_code: list) -> tuple[list[BytecodeType], dict]:
@@ -42,7 +42,7 @@ def build_bytecode(parsed_code: list) -> tuple[list[BytecodeType], dict]:
     return bytecode, algs
 
 
-def _expr_bc(lineno: int, expr: list[ValueType | Op]) -> list[BytecodeType]:
+def _expr_bc(lineno: int, expr: list[Value | Op]) -> list[BytecodeType]:
     """
     Превращает обратную польскую запись вида `(2, 3, Op(op='+'))` в набор команд байт-кода, например:
     ```
@@ -53,14 +53,12 @@ def _expr_bc(lineno: int, expr: list[ValueType | Op]) -> list[BytecodeType]:
     """
     res: list[BytecodeType] = []
     for v in expr:
-        if isinstance(v, str) and v.isalpha():  # имя
-            res.append((lineno, Bytecode.LOAD_NAME, (v,)))
-        elif isinstance(v, str) and v[0] == '"' and v[-1] == '"':  # строка
-            res.append((lineno, Bytecode.LOAD, (v[1:-1],)))
-        elif isinstance(v, ValueType):
-            res.append((lineno, Bytecode.LOAD, (v,)))
-        else:
+        if isinstance(v, Op):
             res.append((lineno, Bytecode.BIN_OP, (v.op,)))
+        elif v.typename == 'get-name':
+            res.append((lineno, Bytecode.LOAD_NAME, (v.value,)))
+        elif isinstance(v, Value):
+            res.append((lineno, Bytecode.LOAD, (v,)))
     return res
 
 

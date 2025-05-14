@@ -11,7 +11,7 @@ PATH_TO_SRC = Path(__file__).parent.parent.parent.absolute() / 'src'
 sys.path.append(str(PATH_TO_SRC.absolute()))
 
 interpreter = importlib.import_module('interpreter')
-code2bc, RuntimeException, VM = interpreter.code2bc, interpreter.RuntimeException, interpreter.VM
+code2bc, RuntimeException, VM, Value = interpreter.code2bc, interpreter.RuntimeException, interpreter.VM, interpreter.value.Value
 
 
 printed_text = ''
@@ -30,7 +30,7 @@ def test_set_one_const():
     bytecode = code2bc('цел а = 5')
     vm = create_vm(*bytecode)
     vm.execute()
-    assert vm.glob_vars == {'а': ('цел', 5)}
+    assert vm.glob_vars == {'а': ('цел', Value('цел', 5))}
 
 
 def test_set_one_var():

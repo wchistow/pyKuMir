@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from typing import Optional, Union, TypeAlias
 
-from .constants import ValueType
+from .value import Value
 
-Expr: TypeAlias = list[Union[ValueType, 'Op']]
+Expr: TypeAlias = list[Union[Value, 'Op']]
 
 class Statement: ...
 
