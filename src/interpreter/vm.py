@@ -29,10 +29,10 @@ class VM:
         self.call_stack.clear()
         self.stack.clear()
 
-    def execute(self) -> None:
+    def execute(self) -> None | NoReturn:
         self._execute(self.bytecode)
 
-    def _execute(self, bc: list[BytecodeType]) -> None:
+    def _execute(self, bc: list[BytecodeType]) -> None | NoReturn:
         for inst in bc:
             if inst[1] == Bytecode.LOAD:
                 self.stack.append(inst[2][0])
@@ -50,7 +50,7 @@ class VM:
                 self.call_stack.pop()
                 return
 
-    def store_var(self, lineno: int, typename: str | None, names: tuple[str]) -> None:
+    def store_var(self, lineno: int, typename: str | None, names: tuple[str]) -> None | NoReturn:
         """Обрабатывает инструкцию STORE"""
         value = self.stack.pop()
         if len(names) > 1 and value is not None:
@@ -67,7 +67,7 @@ class VM:
             for name in names:
                 self._save_var(lineno, typename, name, None)
 
-    def bin_op(self, lineno: int, op: str) -> None:
+    def bin_op(self, lineno: int, op: str) -> None | NoReturn:
         a = self.stack.pop()
         b = self.stack.pop()
         typename = a.typename
@@ -95,7 +95,7 @@ class VM:
             res.append(str(self.stack.pop().value))
         self.output_f(''.join(res[::-1]))
 
-    def call(self, lineno: int, name: str) -> None:
+    def call(self, lineno: int, name: str) -> None | NoReturn:
         if name in self.algs:
             self.in_alg = True
             self.call_stack.append({})
@@ -103,7 +103,7 @@ class VM:
         else:
             raise RuntimeException(lineno, f'имя {name} не определено')
 
-    def _save_var(self, lineno: int, typename: str, name: str, value: Value | None) -> None:
+    def _save_var(self, lineno: int, typename: str, name: str, value: Value | None) -> None | NoReturn:
         """
         Создаёт переменную типа `typename` с именем `name`
         и значением `value` (`None` - объявлена, но не определена).
@@ -129,9 +129,7 @@ class VM:
         Возвращает индекс переменой с именем `name`.
         Если такой нет, возвращает -1.
         """
-        if name in self._get_all_namespaces():
-            return True
-        return False
+        return name in self._get_all_namespaces()
 
     def _get_all_namespaces(self) -> Namespace:
         res = self.glob_vars
@@ -140,12 +138,13 @@ class VM:
         return res
 
 
-def _find_var_in_namespace(lineno: int, name: str, namespace: dict) -> Value | None:
+def _find_var_in_namespace(lineno: int, name: str, namespace: Namespace) -> Value | None | NoReturn:
     if name == 'нс':
         return Value('лит', '\n')
-    if name not in namespace:
+    try:
+        var = namespace[name]
+    except KeyError:
         return None
-    var = namespace[name]
     if var is None:
         raise RuntimeException(lineno, 'нет значения у величины')
     return var[1]
