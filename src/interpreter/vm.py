@@ -134,10 +134,9 @@ class VM:
         return False
 
     def _get_all_namespaces(self) -> Namespace:
-        res: Namespace = {}
-        res |= self.glob_vars
-        for alg_ns in self.call_stack:
-            res |= alg_ns
+        res = self.glob_vars
+        if self.call_stack:
+            res |= self.call_stack[-1]
         return res
 
 

@@ -56,3 +56,21 @@ def test_get_local_var_from_another_alg_error():
 
     with pytest.raises(RuntimeException):
         vm.execute()
+
+
+def test_get_local_var_from_local_call_error():
+    bytecode = code2bc('''алг
+    нач
+      цел а
+      а := 5
+      тест
+    кон
+    
+    алг тест
+    нач
+      вывод а
+    кон''')
+    vm = create_vm(*bytecode)
+
+    with pytest.raises(RuntimeException):
+        vm.execute()
