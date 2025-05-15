@@ -23,6 +23,16 @@ class VM:
         self.call_stack: list[Namespace] = []
         self.in_alg = False
 
+        self.CALL_TRANSITIONS = {
+            Bytecode.LOAD: lambda inst: self.stack.append(inst[2][0]),
+            Bytecode.LOAD_NAME: lambda inst: self.stack.append(self.get_var(inst[0], inst[2][0])),
+            Bytecode.BIN_OP: lambda inst: self.bin_op(inst[0], inst[2][0]),
+            Bytecode.STORE: lambda inst: self.store_var(inst[0], inst[2][0], inst[2][1]),
+            Bytecode.OUTPUT: lambda inst: self.output(inst[2][0]),
+            Bytecode.CALL: lambda inst: self.call(inst[0], inst[2][0]),
+            Bytecode.RET: lambda inst: self.call_stack.pop()
+        }
+
     def reset(self) -> None:
         """Сбрасывает состояние виртуальной машины."""
         self.glob_vars.clear()
@@ -34,20 +44,8 @@ class VM:
 
     def _execute(self, bc: list[BytecodeType]) -> None | NoReturn:
         for inst in bc:
-            if inst[1] == Bytecode.LOAD:
-                self.stack.append(inst[2][0])
-            elif inst[1] == Bytecode.LOAD_NAME:
-                self.stack.append(self.get_var(inst[0], inst[2][0]))
-            elif inst[1] == Bytecode.BIN_OP:
-                self.bin_op(inst[0], inst[2][0])
-            elif inst[1] == Bytecode.STORE:
-                self.store_var(inst[0], inst[2][0], inst[2][1])
-            elif inst[1] == Bytecode.OUTPUT:
-                self.output(inst[2][0])
-            elif inst[1] == Bytecode.CALL:
-                self.call(inst[0], inst[2][0])
-            elif inst[1] == Bytecode.RET:
-                self.call_stack.pop()
+            self.CALL_TRANSITIONS[inst[1]](inst)
+            if inst[1] == Bytecode.RET:
                 return
 
     def store_var(self, lineno: int, typename: str | None, names: tuple[str]) -> None | NoReturn:
