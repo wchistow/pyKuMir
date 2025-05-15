@@ -202,7 +202,6 @@ class Parser:
         exprs: list[list[Value | Op]] = [[]]
 
         self._next_token()
-        print(self.cur_token)
         while self.cur_token.kind in ('NUMBER', 'STRING', 'CHAR', 'NAME', 'OP', 'COMMA'):
             if self.cur_token.kind == 'COMMA':
                 exprs.append([])
@@ -260,7 +259,7 @@ def _get_val(kind: str, value: str) -> Value | Op:
         return Op(value)
 
 
-def improve(parsed_code: list) -> list:
+def improve(parsed_code: list) -> list[Statement]:
     for stmt in parsed_code:
         if isinstance(stmt, StoreVar):
             if stmt.value is not None:

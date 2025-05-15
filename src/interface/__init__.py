@@ -12,13 +12,11 @@ from .console import Console
 
 from compiler import code_to_bytecode, SyntaxException, RuntimeException, VM
 
-VERSION = '1.0.0a'
-
 
 class Interface(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, program_version: str, parent=None):
         super().__init__(parent)
-        self.setWindowTitle(f'pyKuMir v{VERSION}')
+        self.setWindowTitle(f'pyKuMir v{program_version}')
         self.resize(800, 600)
 
         self.menu_bar = QMenuBar(self)
@@ -64,12 +62,12 @@ class Interface(QWidget):
         self.console.output_sys(f'\n>> {datetime.now().strftime("%H:%M:%S")} - Новая программа - Выполнение завершено\n')
 
 
-def run():
+def run(program_version: str):
     logging.info('Запуск приложения...')
 
     app = QApplication([])
 
-    interface = Interface()
+    interface = Interface(program_version)
     interface.show()
 
     logging.info('Приложение запущено')
