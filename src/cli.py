@@ -46,7 +46,7 @@ def run_program(code: str, debug: bool):
             print(f'{name!r}:')
             pretty_print_bc(alg, indent=4)
         print('-' * 40)
-    vm = VM(bc[0], output_f=lambda s: print(s, end=''), algs=bc[1])
+    vm = VM(bc[0], output_f=lambda s: print(s, end=''), input_f=lambda: input() + ' \n', algs=bc[1])
     vm.execute()
 
 

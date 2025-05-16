@@ -9,6 +9,7 @@ CSS = '''<style>
 
 
 class Console(QTextEdit):
+    # TODO: ввод
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.insertHtml(CSS)

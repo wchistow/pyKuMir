@@ -14,6 +14,11 @@ class Output(Statement):
     exprs: list[Expr]
 
 @dataclass
+class Input(Statement):
+    lineno: int
+    targets: list[str]
+
+@dataclass
 class StoreVar(Statement):
     lineno: int
     typename: str | None  # `None` - если переменная уже объявлена (`а := 5`)

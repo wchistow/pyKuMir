@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import re
 from typing import Iterable
 
-from .ast_classes import AlgStart, AlgEnd, Statement, StoreVar, Op, Output, Call
+from .ast_classes import AlgStart, AlgEnd, Statement, StoreVar, Op, Output, Call, Input
 from .constants import KEYWORDS, TYPES
 from .value import Value
 from .exceptions import SyntaxException
@@ -17,7 +17,7 @@ token_specification = [
             ('NAME',           r'[A-Za-zА-Яа-я_][A-Za-zА-Яа-я_0-9]*'),
             ('ASSIGN',        r':='),
             ('EQ',            r'='),
-            ('OP',            r'(\+|\-|\*|/|\*\*|>=|<=|<>|\(|\))'),
+            ('OP',            r'(\*\*|\+|\-|\*|/|>=|<=|<>|\(|\))'),
             ('COMMA',         r','),
             ('NEWLINE',       r'\n'),
             ('SKIP',          r'[ \t]'),
@@ -52,15 +52,6 @@ class Parser:
         self._was_alg = False
 
         self.tokens = re.finditer(TOK_REGEX, code+'\n')
-
-    def reset(self) -> None:
-        self.envs.clear()
-        self.cur_expr.clear()
-        self.line = 0
-        self.cur_cls = None
-        self.res.clear()
-
-        self._was_alg = False
 
     def _next_token(self) -> None:
         mo = next(self.tokens)
@@ -144,13 +135,13 @@ class Parser:
         elif self.cur_token.kind != 'NEWLINE':
             raise SyntaxException(self.line, self.cur_token.value)
 
-        return ' '.join(alg_name)
-
     def _handle_statement(self) -> None:
         if self.cur_token.kind == 'TYPE':  # объявление переменной(ых)
             self._handle_var_def()
         elif self.cur_token.kind == 'NAME' and self.cur_token.value == 'вывод':
             self._handle_output()
+        elif self.cur_token.kind == 'NAME' and self.cur_token.value == 'ввод':
+            self._handle_input()
         elif self.cur_token.kind == 'NAME':
             name = self.cur_token.value
             self._next_token()
@@ -209,11 +200,28 @@ class Parser:
                 exprs[-1].append(_get_val(self.cur_token.kind, self.cur_token.value))
             self._next_token()
         if self.cur_token.kind != 'NEWLINE' or exprs == [[]]:
-            raise SyntaxException(self.line, self.cur_token.value)
+            raise SyntaxException(self.line, self.cur_token.value, 'что выводить?')
 
         if not all(e for e in exprs):
             raise SyntaxException(self.line, self.cur_token.value)
         self.res.append(Output(self.line - 1, exprs))
+
+    def _handle_input(self) -> None:
+        targets: list[str] = []
+
+        self._next_token()
+        last = self.cur_token.kind
+        while self.cur_token.kind in ('NAME', 'COMMA'):
+            if self.cur_token.kind == 'NAME':
+                targets.append(self.cur_token.value)
+            self._next_token()
+            if last == self.cur_token.kind:
+                raise SyntaxException(self.line, self.cur_token.value)
+            last = self.cur_token.kind
+        if self.cur_token.kind != 'NEWLINE' or not targets:
+            raise SyntaxException(self.line, self.cur_token.value, 'куда вводить?')
+
+        self.res.append(Input(self.line - 1, targets))
 
     def _handle_expr(self) -> list[Value | Op]:
         expr = []
@@ -263,6 +271,7 @@ def improve(parsed_code: list) -> list[Statement]:
     for stmt in parsed_code:
         if isinstance(stmt, StoreVar):
             if stmt.value is not None:
+                print(*stmt.value, sep='\n')
                 stmt.value = _to_reverse_polish(stmt.value)
         elif isinstance(stmt, Output):
             stmt.exprs = [_to_reverse_polish(expr) for expr in stmt.exprs]

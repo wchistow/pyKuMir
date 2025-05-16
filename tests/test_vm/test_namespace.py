@@ -4,6 +4,8 @@ import sys
 
 import pytest
 
+from mocks import PrintMock
+
 PATH_TO_SRC = Path(__file__).parent.parent.parent.absolute() / 'src'
 
 sys.path.append(str(PATH_TO_SRC.absolute()))
@@ -11,16 +13,14 @@ sys.path.append(str(PATH_TO_SRC.absolute()))
 interpreter = importlib.import_module('interpreter')
 code2bc, RuntimeException, VM = interpreter.code2bc, interpreter.RuntimeException, interpreter.VM
 
-printed_text = ''
+print_mock = PrintMock()
 
 
 def create_vm(bc, algs):
-    return VM(bc, output_f=output, algs=algs)
+    return VM(bc, output_f=print_mock.print, input_f=lambda: None, algs=algs)
 
-
-def output(s: str) -> None:
-    global printed_text
-    printed_text = s
+def setup_function(func):
+    print_mock.printed_text = ''
 
 
 def test_get_glob_var_from_alg():
@@ -32,7 +32,7 @@ def test_get_glob_var_from_alg():
     кон''')
     vm = create_vm(*bytecode)
     vm.execute()
-    assert printed_text == '5'
+    assert print_mock.printed_text == '5'
 
 
 def test_get_local_var_from_another_alg_error():

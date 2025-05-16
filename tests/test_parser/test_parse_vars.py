@@ -63,3 +63,9 @@ def test_two_vars_with_value_error():
     parser = Parser('цел а, б := 2')
     with pytest.raises(SyntaxException):
         parser.parse()
+
+
+def test_const_expr_error():
+    parser = Parser('цел а = 2 + 2')
+    with pytest.raises(SyntaxException):
+        parser.parse()

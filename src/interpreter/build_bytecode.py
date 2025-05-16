@@ -1,4 +1,4 @@
-from .ast_classes import StoreVar, Output, Op, AlgStart, AlgEnd, Call
+from .ast_classes import StoreVar, Output, Op, AlgStart, AlgEnd, Call, Input
 from .bytecode import Bytecode, BytecodeType
 from .value import Value
 
@@ -24,6 +24,8 @@ def build_bytecode(parsed_code: list) -> tuple[list[BytecodeType], dict]:
             for expr in stmt.exprs:
                 cur_ns.extend(_expr_bc(stmt.lineno, expr))
             cur_ns.append((stmt.lineno, Bytecode.OUTPUT, (len(stmt.exprs),)))
+        elif isinstance(stmt, Input):
+            cur_ns.append((stmt.lineno, Bytecode.INPUT, tuple(stmt.targets)))
         elif isinstance(stmt, AlgStart):
             algs[stmt.name] = []
             cur_alg = stmt.name
@@ -60,18 +62,3 @@ def _expr_bc(lineno: int, expr: list[Value | Op]) -> list[BytecodeType]:
         elif isinstance(v, Value):
             res.append((lineno, Bytecode.LOAD, (v,)))
     return res
-
-
-def pretty_print_bc(bc: list[BytecodeType], indent: int = 0) -> None:
-    """
-    Печатает переданный байт-код в формате:
-    ```
-     <номер строки>  <команда> <аргументы>
-    ```
-    Пример:
-    ```
-    1  LOAD            (2,)
-    ```
-    """
-    for inst in bc:
-        print(f'{" "*indent}{inst[0]:2}  {inst[1].name:15} {inst[2]}')

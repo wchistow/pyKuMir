@@ -33,8 +33,14 @@ def test_output_multiple():
 
 # --- тесты ошибок ---
 
-def test_too_many_commas():
+def test_too_many_commas_error():
     code = 'вывод 5,,'
     parser = Parser(code)
+    with pytest.raises(SyntaxException):
+        parser.parse()
+
+
+def test_empty_output_error():
+    parser = Parser('вывод')
     with pytest.raises(SyntaxException):
         parser.parse()
