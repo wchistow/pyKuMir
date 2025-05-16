@@ -1,7 +1,6 @@
 import sys
 
-from interpreter import build_bytecode, improve, Parser, VM
-from interpreter.build_bytecode import pretty_print_bc
+from interpreter import build_bytecode, improve, Parser, VM, pretty_print_bc
 from metadata import VERSION
 
 HELP = '''Использование:
@@ -19,7 +18,7 @@ def main(argv):
 
     argv = argv[1:]
     if not argv or '--help' in argv or '-h' in argv:
-        print_help()
+        print(HELP)
         return
     elif '--version' in argv or '-V' in argv:
         print(f'pyKuMir v{VERSION}')
@@ -46,12 +45,8 @@ def run_program(code: str, debug: bool):
             print(f'{name!r}:')
             pretty_print_bc(alg, indent=4)
         print('-' * 40)
-    vm = VM(bc[0], output_f=lambda s: print(s, end=''), input_f=lambda: input() + ' \n', algs=bc[1])
+    vm = VM(bc[0], output_f=lambda s: print(s, end=''), input_f=input, algs=bc[1])
     vm.execute()
-
-
-def print_help():
-    print(HELP)
 
 
 if __name__ == '__main__':
