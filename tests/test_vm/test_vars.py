@@ -5,7 +5,6 @@ import sys
 import pytest
 
 from mocks import PrintMock
-from utils import wrap_code_into_main
 
 PATH_TO_SRC = Path(__file__).parent.parent.parent.absolute() / 'src'
 
@@ -80,6 +79,19 @@ def test_divide_result_is_float():
     vm = create_vm(*bytecode)
     vm.execute()
     assert print_mock.printed_text == '2.0'
+
+
+def test_bool_var():
+    bytecode = code2bc("лог а := да\nвывод а")
+    vm = create_vm(*bytecode)
+    vm.execute()
+    assert print_mock.printed_text == 'да'
+
+def test_char_plus_char():
+    bytecode = code2bc("лит а := 'а' + 'б'\nвывод а")
+    vm = create_vm(*bytecode)
+    vm.execute()
+    assert print_mock.printed_text == 'аб'
 
 # --- тесты ошибок ---
 

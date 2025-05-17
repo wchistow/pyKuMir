@@ -260,18 +260,17 @@ def _get_val(kind: str, value: str) -> Value | Op:
     elif kind == 'CHAR':
         return Value('сим', value[1:-1])
     elif kind == 'NAME' and value in ('да', 'нет'):
-        return Value('лог', value == 'да')
+        return Value('лог', value)
     elif kind == 'NAME':
         return Value('get-name', value)
     elif kind == 'OP':
         return Op(value)
 
 
-def improve(parsed_code: list) -> list[Statement]:
+def improve(parsed_code: list[Statement]) -> list[Statement]:
     for stmt in parsed_code:
         if isinstance(stmt, StoreVar):
             if stmt.value is not None:
-                print(*stmt.value, sep='\n')
                 stmt.value = _to_reverse_polish(stmt.value)
         elif isinstance(stmt, Output):
             stmt.exprs = [_to_reverse_polish(expr) for expr in stmt.exprs]

@@ -14,23 +14,27 @@ ast_classes = interpreter.ast_classes
 
 
 def test_simple_var_def():
-    code = 'алг\nнач\n цел а := 2\nкон'
+    code = 'цел а := 2'
     parser = Parser(code)
     parsed = parser.parse()
     assert parsed == [
-        ast_classes.AlgStart(lineno=1, is_main=True, name=''),
-        ast_classes.StoreVar(2, 'цел', ['а'], [Value('цел', 2)]),
-        ast_classes.AlgEnd(lineno=3)
+        ast_classes.StoreVar(0, 'цел', ['а'], [Value('цел', 2)])
+    ]
+
+def test_float_number():
+    code = 'вещ а := 2.5'
+    parser = Parser(code)
+    parsed = parser.parse()
+    assert parsed == [
+        ast_classes.StoreVar(0, 'вещ', ['а'], [Value('вещ', 2.5)]),
     ]
 
 def test_var_def_with_expr():
-    code = 'алг\nнач\n цел а := 2 + б\nкон'
+    code = 'цел а := 2 + б'
     parser = Parser(code)
     parsed = parser.parse()
     assert parsed == [
-        ast_classes.AlgStart(lineno=1, is_main=True, name=''),
-        ast_classes.StoreVar(2, 'цел', ['а'], [Value('цел', 2), ast_classes.Op(op='+'), Value('get-name', 'б')]),
-        ast_classes.AlgEnd(lineno=3)
+        ast_classes.StoreVar(0, 'цел', ['а'], [Value('цел', 2), ast_classes.Op(op='+'), Value('get-name', 'б')])
     ]
 
 def test_single_var_declare():

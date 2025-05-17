@@ -36,16 +36,16 @@ class VM:
             Bytecode.RET: lambda inst: self.call_stack.pop()
         }
 
-    def execute(self) -> None | NoReturn:
+    def execute(self) -> None:
         self._execute(self.bytecode)
 
-    def _execute(self, bc: list[BytecodeType]) -> None | NoReturn:
+    def _execute(self, bc: list[BytecodeType]) -> None:
         for inst in bc:
             self.CALL_TRANSITIONS[inst[1]](inst)
             if inst[1] == Bytecode.RET:
-                return
+                break
 
-    def store_var(self, lineno: int, typename: str | None, names: tuple[str]) -> None | NoReturn:
+    def store_var(self, lineno: int, typename: str | None, names: tuple[str]) -> None:
         """Обрабатывает инструкцию STORE"""
         value = self.stack.pop()
         if typename is None:  # сохранение значения в уже объявленную переменную
@@ -60,7 +60,7 @@ class VM:
             for name in names:
                 self._save_var(lineno, typename, name, None)
 
-    def bin_op(self, lineno: int, op: str) -> None | NoReturn:
+    def bin_op(self, lineno: int, op: str) -> None:
         a = self.stack.pop()
         b = self.stack.pop()
         typename = a.typename
@@ -88,7 +88,7 @@ class VM:
             res.append(str(self.stack.pop().value))
         self.output_f(''.join(res[::-1]))
 
-    def input(self, lineno: int, targets: list[str]) -> None | NoReturn:
+    def input(self, lineno: int, targets: list[str]) -> None:
         cur_target_i = 0
         while cur_target_i < len(targets):
             inputted = self.input_f()
@@ -107,13 +107,13 @@ class VM:
                     try:
                         target = targets[cur_target_i]
                     except IndexError:
-                        return
+                        break
                     var_type = self._get_all_namespaces()[target][0]
                     self._save_var(lineno, var_type, target,
                                    _convert_string_to_type(lineno, text, var_type))
                     cur_target_i += 1
 
-    def call(self, lineno: int, name: str) -> None | NoReturn:
+    def call(self, lineno: int, name: str) -> None:
         if name in self.algs:
             self.in_alg = True
             self.call_stack.append({})
@@ -156,7 +156,7 @@ class VM:
         return res
 
 
-def _convert_string_to_type(lineno: int, string: str, var_type: str) -> Value | NoReturn:
+def _convert_string_to_type(lineno: int, string: str, var_type: str) -> Value:
     if var_type == 'цел':
         try:
             return Value('цел', int(string))
@@ -168,7 +168,7 @@ def _convert_string_to_type(lineno: int, string: str, var_type: str) -> Value | 
         except ValueError:
             raise RuntimeException(lineno, 'Ошибка ввода вещественного числа') from None
     elif var_type == 'лог':
-        return Value('лог', string == 'да')
+        return Value('лог', string)
     elif var_type == 'лит':
         return Value('лит', string)
     elif var_type == 'сим':
@@ -182,6 +182,6 @@ def _find_var_in_namespace(lineno: int, name: str, namespace: Namespace) -> Valu
         var = namespace[name]
     except KeyError:
         return None
-    if var is None:
+    if var[1] is None:
         raise RuntimeException(lineno, 'нет значения у величины')
     return var[1]

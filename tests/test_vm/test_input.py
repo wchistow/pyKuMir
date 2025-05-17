@@ -41,6 +41,22 @@ def test_input_string():
     vm.execute()
     assert print_mock.printed_text == 'привет, мир!'
 
+
+def test_input_bool():
+    input_mock.entered_text = 'да'
+    bytecode = code2bc('лог а\nввод а\nвывод а')
+    vm = create_vm(*bytecode)
+    vm.execute()
+    assert print_mock.printed_text == 'да'
+
+
+def test_input_char():
+    input_mock.entered_text = 'а'
+    bytecode = code2bc('сим а\nввод а\nвывод а')
+    vm = create_vm(*bytecode)
+    vm.execute()
+    assert print_mock.printed_text == 'а'
+
 # тесты ошибок
 
 def test_undef_target_input_error():
