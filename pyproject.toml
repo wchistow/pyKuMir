@@ -6,7 +6,11 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "Pygments>=2.2",
-    "PyQt6",
-    # DEBUG
-    "pytest==7.4.*",
+    "PyQt6"
+]
+
+[dependency-groups]
+dev = [
+    "pytest==8.*",
+    "pytest-cov==6.*",
 ]
