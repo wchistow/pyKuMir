@@ -1,7 +1,7 @@
 from typing import Callable, NoReturn, TypeAlias
 
 from .bytecode import Bytecode, BytecodeType
-from .exceptions import SyntaxException, RuntimeException
+from .exceptions import RuntimeException
 from .value import Value
 
 Namespace: TypeAlias = dict[str, tuple[str, Value | None]]
