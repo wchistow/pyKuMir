@@ -1,4 +1,4 @@
-from typing import Callable, NoReturn, TypeAlias
+from typing import Callable, TypeAlias
 
 from .bytecode import Bytecode, BytecodeType
 from .exceptions import RuntimeException
@@ -13,6 +13,12 @@ class VM:
                  output_f: Callable[[str], None],
                  input_f: Callable[[], str],
                  algs: dict[str, list[BytecodeType]] | None = None) -> None:
+        """
+        :param bytecode: список команд байт-кода
+        :param output_f: функция, в неё передаётся строка для вывода
+        :param input_f: функция, вызывается для получения ввода пользователя
+        :param algs: словарь алгоритмов в программе (формата `имя: список команд байт-кода`)
+        """
         self.output_f = output_f
         self.input_f = input_f
         self.bytecode = bytecode
@@ -21,8 +27,7 @@ class VM:
         self.glob_vars: Namespace = {'нс': ('лит', Value('лит', '\n'))}
         self.stack: list[Value | None] = []
 
-        # Локальные переменные текущих функций
-        self.call_stack: list[Namespace] = []
+        self.call_stack: list[Namespace] = []  # Локальные переменные текущих функций
         self.in_alg = False
 
         self.CALL_TRANSITIONS = {
@@ -46,7 +51,12 @@ class VM:
                 break
 
     def store_var(self, lineno: int, typename: str | None, names: tuple[str]) -> None:
-        """Обрабатывает инструкцию STORE"""
+        """
+        Обрабатывает инструкцию STORE
+        :param lineno: номер текущей строки
+        :param typename: тип переменной(ых), `None`, если нужно сохранить значения в уже объявленную переменную
+        :param names: имя/имена переменной(ых)
+        """
         value = self.stack.pop()
         if typename is None:  # сохранение значения в уже объявленную переменную
             if not self._var_defined(names[0]):
@@ -61,9 +71,16 @@ class VM:
                 self._save_var(lineno, typename, name, None)
 
     def bin_op(self, lineno: int, op: str) -> None:
+        """
+        Обрабатывает инструкцию BIN_OP
+        :param lineno: номер текущей строки
+        :param op: оператор, например `'+'`
+        """
         a = self.stack.pop()
         b = self.stack.pop()
         typename = a.typename
+
+        # операции над разными типами можно проводить, только если это цел или вещ
         if sorted((a.typename, b.typename)) == ['вещ', 'цел']:
             typename = 'вещ'
         elif a.typename != b.typename:
@@ -72,7 +89,7 @@ class VM:
         if op == '+' and a.typename in ('цел', 'вещ', 'лит'):
             self.stack.append(Value(typename, b.value + a.value))
         elif op == '+' and a.typename == 'сим':
-            self.stack.append(Value('лит', b.value + a.value))
+            self.stack.append(Value('лит', b.value + a.value))  # <сим> + <сим> = <лит>
         elif op == '-' and a.typename in ('цел', 'вещ'):
             self.stack.append(Value(typename, b.value - a.value))
         elif op == '*' and a.typename in ('цел', 'вещ'):
@@ -83,12 +100,19 @@ class VM:
             self.stack.append(Value(typename, b.value ** a.value))
 
     def output(self, exprs_num: int) -> None:
-        res: list[str] = []
-        for _ in range(exprs_num):
-            res.append(str(self.stack.pop().value))
-        self.output_f(''.join(res[::-1]))
+        """
+        Обрабатывает инструкцию OUTPUT
+        :param exprs_num: количество выражений, которых нужно вывести (они загружаются из стека)
+        """
+        exprs: list[str] = [str(self.stack.pop().value) for _ in range(exprs_num)]
+        self.output_f(''.join(exprs[::-1]))
 
     def input(self, lineno: int, targets: list[str]) -> None:
+        """
+        Обрабатывает инструкцию INPUT
+        :param lineno: номер текущей строки кода
+        :param targets: список имён переменных, в которые необходимо записать ввод пользователя
+        """
         cur_target_i = 0
         while cur_target_i < len(targets):
             inputted = self.input_f()
@@ -114,6 +138,11 @@ class VM:
                     cur_target_i += 1
 
     def call(self, lineno: int, name: str) -> None:
+        """
+        Обрабатывает инструкцию CALL
+        :param lineno: номер текущей строки кода
+        :param name: имя алгоритма, который нужно вызвать
+        """
         if name in self.algs:
             self.in_alg = True
             self.call_stack.append({})
@@ -121,10 +150,13 @@ class VM:
         else:
             raise RuntimeException(lineno, f'имя {name} не определено')
 
-    def _save_var(self, lineno: int, typename: str, name: str, value: Value | None) -> None | NoReturn:
+    def _save_var(self, lineno: int, typename: str, name: str, value: Value | None) -> None:
         """
-        Создаёт переменную типа `typename` с именем `name`
-        и значением `value` (`None` - объявлена, но не определена).
+        Создаёт переменную
+        :param lineno: номер текущей строки кода
+        :param typename: тип переменной
+        :param name: имя переменной
+        :param value: значение переменной (`None` - объявлена, но не определена)
         """
         namespace = self.call_stack[-1] if self.in_alg else self.glob_vars
         if value is None:
@@ -136,7 +168,13 @@ class VM:
         else:
             raise RuntimeException(lineno, message=f'нельзя "{typename} := {value_type}"')
 
-    def get_var(self, lineno: int, name: str) -> Value | NoReturn:
+    def get_var(self, lineno: int, name: str) -> Value:
+        """
+        :param lineno: номер текущей строки кода
+        :param name: имя переменной
+        :return: экземпляр класса `Value` - значение переменной
+        :raise: RuntimeException - если имя не объявлено
+        """
         var = _find_var_in_namespace(lineno, name, self._get_all_namespaces())
         if var is not None:
             return var
@@ -144,12 +182,15 @@ class VM:
 
     def _var_defined(self, name: str) -> bool:
         """
-        Возвращает индекс переменой с именем `name`.
-        Если такой нет, возвращает -1.
+        :param name: имя переменной
+        :return: `True`, если имя объявлено, иначе `False`
         """
         return name in self._get_all_namespaces()
 
     def _get_all_namespaces(self) -> Namespace:
+        """
+        :return: словарь - все доступные переменные
+        """
         res = self.glob_vars
         if self.call_stack:
             res |= self.call_stack[-1]
@@ -157,6 +198,12 @@ class VM:
 
 
 def _convert_string_to_type(lineno: int, string: str, var_type: str) -> Value:
+    """
+    Преобразует строку в значение языка КуМир в зависимости от переданного типа
+    :param string: исходная строка
+    :param var_type: тип, в которые необходимо преобразовать строку
+    :return: экземпляр класса `Value` - значение
+    """
     if var_type == 'цел':
         try:
             return Value('цел', int(string))
@@ -177,7 +224,13 @@ def _convert_string_to_type(lineno: int, string: str, var_type: str) -> Value:
         return Value('сим', string)
 
 
-def _find_var_in_namespace(lineno: int, name: str, namespace: Namespace) -> Value | None | NoReturn:
+def _find_var_in_namespace(lineno: int, name: str, namespace: Namespace) -> Value | None:
+    """
+    :param name: имя переменной
+    :param namespace: словарь всех переменных
+    :return: `None` если переменная не найдена, иначе `Value`
+    :raise: RuntimeException - если переменная объявлена, но ей не присвоено значение
+    """
     try:
         var = namespace[name]
     except KeyError:

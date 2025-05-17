@@ -1,16 +1,16 @@
 from .build_bytecode import build_bytecode
-from .parser import Parser, improve
+from .parser import Parser
 
 from .bytecode import BytecodeType
 from .exceptions import SyntaxException, RuntimeException
 from .vm import VM
 
-__all__ = ['build_bytecode', 'Parser', 'improve', 'SyntaxException', 'RuntimeException', 'VM', 'pretty_print_bc']
+__all__ = ['build_bytecode', 'Parser', 'SyntaxException', 'RuntimeException', 'VM', 'pretty_print_bc']
 
 
 def code2bc(code: str) -> tuple[list[BytecodeType], dict[str, list[BytecodeType]]]:
     p = Parser(code)
-    return build_bytecode(improve(p.parse()))
+    return build_bytecode(p.parse())
 
 
 def pretty_print_bc(bc: list[BytecodeType], indent: int = 0) -> None:

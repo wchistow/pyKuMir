@@ -110,13 +110,13 @@ class Parser:
     def _handle_alg_header(self, is_main: bool):
         self._next_token()
 
-        alg_name = self._handle_alg_name()
+        alg_name = self._parse_alg_name()
 
         self._next_token()
 
         self.res.append(AlgStart(self.line - 1 if self.line > 0 else self.line, is_main=is_main, name=alg_name))
 
-    def _handle_alg_name(self) -> str:
+    def _parse_alg_name(self) -> str:
         alg_name = []
         if self.cur_token.kind == 'NAME' and self.cur_token.value != 'нач':
             alg_name.append(self.cur_token.value)
@@ -167,9 +167,9 @@ class Parser:
             self._next_token()
 
         if self.cur_token.kind == 'ASSIGN':
-            expr = self._handle_expr()
+            expr = self._parse_expr()
         elif self.cur_token.kind == 'EQ':
-            expr = self._handle_const_expr()
+            expr = self._parse_const_expr()
             self._next_token()
             if self.cur_token.kind != 'NEWLINE':
                 raise SyntaxException(self.line, self.cur_token.value, 'это не константа')
@@ -187,7 +187,7 @@ class Parser:
         self.res.append(StoreVar(self.line - 1, typename, name_s, expr))
 
     def _handle_var_assign(self, name: str) -> None:
-        self.res.append(StoreVar(self.line - 1, None, [name], self._handle_expr()))
+        self.res.append(StoreVar(self.line - 1, None, [name], self._parse_expr()))
 
     def _handle_output(self) -> None:
         exprs: list[list[Value | Op]] = [[]]
@@ -204,7 +204,7 @@ class Parser:
 
         if not all(e for e in exprs):
             raise SyntaxException(self.line, self.cur_token.value)
-        self.res.append(Output(self.line - 1, exprs))
+        self.res.append(Output(self.line - 1, [_to_reverse_polish(expr) for expr in exprs]))
 
     def _handle_input(self) -> None:
         targets: list[str] = []
@@ -223,7 +223,7 @@ class Parser:
 
         self.res.append(Input(self.line - 1, targets))
 
-    def _handle_expr(self) -> list[Value | Op]:
+    def _parse_expr(self) -> list[Value | Op]:
         expr = []
 
         self._next_token()
@@ -233,9 +233,9 @@ class Parser:
         if self.cur_token.kind != 'NEWLINE' or not expr:
             raise SyntaxException(self.line, self.cur_token.value)
 
-        return expr
+        return _to_reverse_polish(expr)
 
-    def _handle_const_expr(self) -> list[Value]:
+    def _parse_const_expr(self) -> list[Value]:
         self._next_token()
         if self.cur_token.kind in ('STRING', 'NAME', 'CHAR', 'NUMBER'):
             return [_get_val(self.cur_token.kind, self.cur_token.value)]
@@ -265,16 +265,6 @@ def _get_val(kind: str, value: str) -> Value | Op:
         return Value('get-name', value)
     elif kind == 'OP':
         return Op(value)
-
-
-def improve(parsed_code: list[Statement]) -> list[Statement]:
-    for stmt in parsed_code:
-        if isinstance(stmt, StoreVar):
-            if stmt.value is not None:
-                stmt.value = _to_reverse_polish(stmt.value)
-        elif isinstance(stmt, Output):
-            stmt.exprs = [_to_reverse_polish(expr) for expr in stmt.exprs]
-    return parsed_code
 
 
 def _get_priority(op: Op) -> int:

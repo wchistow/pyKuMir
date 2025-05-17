@@ -1,6 +1,6 @@
 import sys
 
-from interpreter import build_bytecode, improve, Parser, VM, pretty_print_bc
+from interpreter import build_bytecode, Parser, VM, pretty_print_bc
 from metadata import VERSION
 
 HELP = '''Использование:
@@ -35,7 +35,7 @@ def main(argv):
 
 def run_program(code: str, debug: bool):
     parser = Parser(code, debug)
-    parsed = improve(parser.parse())
+    parsed = parser.parse()
     bc = build_bytecode(parsed)
     if debug:
         print(parsed)

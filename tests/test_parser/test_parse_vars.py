@@ -34,7 +34,7 @@ def test_var_def_with_expr():
     parser = Parser(code)
     parsed = parser.parse()
     assert parsed == [
-        ast_classes.StoreVar(0, 'цел', ['а'], [Value('цел', 2), ast_classes.Op(op='+'), Value('get-name', 'б')])
+        ast_classes.StoreVar(0, 'цел', ['а'], [Value('цел', 2), Value('get-name', 'б'), ast_classes.Op(op='+')])
     ]
 
 def test_single_var_declare():

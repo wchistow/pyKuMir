@@ -4,6 +4,7 @@ from .value import Value
 
 
 def build_bytecode(parsed_code: list) -> tuple[list[BytecodeType], dict]:
+    """Преобразует АСД в байт-код."""
     bytecode: list[BytecodeType] = []
     algs: dict[str, list[BytecodeType]] = {}
     cur_alg: str | None = None

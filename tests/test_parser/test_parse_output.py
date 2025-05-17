@@ -23,7 +23,7 @@ def test_output_with_expr():
     code = 'вывод 2 + 5'
     parser = Parser(code)
     parsed = parser.parse()
-    assert parsed == [ast_classes.Output(0, [[Value('цел', 2), ast_classes.Op(op='+'), Value('цел', 5)]])]
+    assert parsed == [ast_classes.Output(0, [[Value('цел', 2), Value('цел', 5), ast_classes.Op(op='+')]])]
 
 def test_output_multiple():
     code = 'вывод 2, 5'
