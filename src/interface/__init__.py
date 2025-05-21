@@ -9,8 +9,9 @@ from PyQt6.QtCore import Qt
 
 from .codeinput import CodeInput
 from .console import Console
+from .docview import DocView
 
-from compiler import code_to_bytecode, SyntaxException, RuntimeException, VM
+from interpreter import code2bc, SyntaxException, RuntimeException, VM
 
 
 class Interface(QWidget):
@@ -20,6 +21,9 @@ class Interface(QWidget):
         self.resize(800, 600)
 
         self.menu_bar = QMenuBar(self)
+
+        self.docview = DocView()
+
         self.file_menu = QMenu('Программа')
         self.file_menu.addAction('Выход', self.close)
         self.menu_bar.addMenu(self.file_menu)
@@ -42,6 +46,8 @@ class Interface(QWidget):
         self.grid.addWidget(self.menu_bar, 0, 0, 0, 0)
         self.grid.addLayout(self.buttons, 1, 0, 1, 1)
         self.grid.addWidget(self.code_and_console, 2, 0, 7, 1)
+
+        self.setMinimumSize(600, 500)
 
         self.setLayout(self.grid)
 

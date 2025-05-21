@@ -3,7 +3,7 @@ from pygments.formatters import HtmlFormatter
 from pygments.lexer import RegexLexer, words
 from pygments.token import Comment, Keyword, Number, Text, String
 
-from compiler.constants import KEYWORDS, TYPES
+from interpreter.constants import KEYWORDS, TYPES
 
 CSS = '''<style>
 .k {
