@@ -109,7 +109,7 @@ def test_parse_call_alg_with_space_in_name():
 
 # тесты ошибок
 
-def test_without_нач_error():
+def test_without_start_keyword_error():
     code = '''алг
     цел а := 5
     кон'''
@@ -118,7 +118,7 @@ def test_without_нач_error():
         parser.parse()
 
 
-def test_without_кон_error():
+def test_without_end_keyword_error():
     code = '''алг
     нач
     цел а := 5'''
