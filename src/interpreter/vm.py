@@ -104,7 +104,7 @@ class VM:
         Обрабатывает инструкцию OUTPUT
         :param exprs_num: количество выражений, которых нужно вывести (они загружаются из стека)
         """
-        exprs: list[str] = [str(self.stack.pop().value) for _ in range(exprs_num)]
+        exprs = [str(self.stack.pop().value) for _ in range(exprs_num)]
         self.output_f(''.join(exprs[::-1]))
 
     def input(self, lineno: int, targets: list[str]) -> None:

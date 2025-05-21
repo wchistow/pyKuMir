@@ -167,7 +167,10 @@ class Parser:
             self._next_token()
 
         if self.cur_token.kind == 'ASSIGN':
+            self._next_token()
             expr = self._parse_expr()
+            if self.cur_token.kind != 'NEWLINE':
+                raise SyntaxException(self.line, self.cur_token.value)
         elif self.cur_token.kind == 'EQ':
             expr = self._parse_const_expr()
             self._next_token()
@@ -187,23 +190,25 @@ class Parser:
         self.res.append(StoreVar(self.line - 1, typename, name_s, expr))
 
     def _handle_var_assign(self, name: str) -> None:
-        self.res.append(StoreVar(self.line - 1, None, [name], self._parse_expr()))
+        self._next_token()
+        expr = self._parse_expr()
+        if self.cur_token.kind != 'NEWLINE':
+            raise SyntaxException(self.line, self.cur_token.value)
+        self.res.append(StoreVar(self.line - 1, None, [name], expr))
 
     def _handle_output(self) -> None:
-        exprs: list[list[Value | Op]] = [[]]
+        exprs: list[list[Value | Op]] = []
 
         self._next_token()
-        while self.cur_token.kind in ('NUMBER', 'STRING', 'CHAR', 'NAME', 'OP', 'COMMA'):
-            if self.cur_token.kind == 'COMMA':
-                exprs.append([])
-            else:
-                exprs[-1].append(_get_val(self.cur_token.kind, self.cur_token.value))
+        exprs.append(self._parse_expr())
+        while self.cur_token.kind == 'COMMA':
             self._next_token()
-        if self.cur_token.kind != 'NEWLINE' or exprs == [[]]:
+            exprs.append(self._parse_expr())
+        if exprs == [[]]:
             raise SyntaxException(self.line, self.cur_token.value, 'что выводить?')
-
-        if not all(e for e in exprs):
+        elif self.cur_token.kind != 'NEWLINE':
             raise SyntaxException(self.line, self.cur_token.value)
+
         self.res.append(Output(self.line - 1, [_to_reverse_polish(expr) for expr in exprs]))
 
     def _handle_input(self) -> None:
@@ -226,11 +231,17 @@ class Parser:
     def _parse_expr(self) -> list[Value | Op]:
         expr = []
 
-        self._next_token()
+        last_kind = ''
         while self.cur_token.kind in ('STRING', 'NAME', 'CHAR', 'NUMBER', 'OP'):
             expr.append(_get_val(self.cur_token.kind, self.cur_token.value))
             self._next_token()
-        if self.cur_token.kind != 'NEWLINE' or not expr:
+            if self.cur_token.kind == last_kind and self.cur_token.value not in ('(', ')'):
+                raise SyntaxException(self.line, self.cur_token.value)
+
+            if self.cur_token.value not in ('(', ')'):
+                last_kind = self.cur_token.kind
+
+        if not expr:
             raise SyntaxException(self.line, self.cur_token.value)
 
         return _to_reverse_polish(expr)
