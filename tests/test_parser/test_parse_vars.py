@@ -73,3 +73,9 @@ def test_const_expr_error():
     parser = Parser('цел а = 2 + 2')
     with pytest.raises(SyntaxException):
         parser.parse()
+
+
+def test_two_ops_in_expr_error():
+    parser = Parser('цел а = 2 + * 2')
+    with pytest.raises(SyntaxException):
+        parser.parse()
