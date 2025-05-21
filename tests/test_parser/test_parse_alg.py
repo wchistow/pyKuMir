@@ -22,7 +22,7 @@ def test_parse_simple_alg():
     parser = Parser(code)
     parsed2 = parser.parse()
 
-    assert parsed1 == [ast_classes.AlgStart(1, is_main=True, name=''), ast_classes.AlgEnd(2)]
+    assert parsed1 == [ast_classes.AlgStart(0, is_main=True, name=''), ast_classes.AlgEnd(2)]
     assert parsed2 == [ast_classes.AlgStart(0, is_main=True, name=''), ast_classes.AlgEnd(0)]
 
 
@@ -33,7 +33,7 @@ def test_parse_alg_with_name():
     '''
     parser = Parser(code)
     parsed = parser.parse()
-    assert parsed == [ast_classes.AlgStart(1, is_main=True, name='тест'), ast_classes.AlgEnd(2)]
+    assert parsed == [ast_classes.AlgStart(0, is_main=True, name='тест'), ast_classes.AlgEnd(2)]
 
 
 def test_parse_two_algs():
@@ -48,9 +48,9 @@ def test_parse_two_algs():
     parser = Parser(code)
     parsed = parser.parse()
     assert parsed == [
-        ast_classes.AlgStart(1, is_main=True, name='тест1'),
+        ast_classes.AlgStart(0, is_main=True, name='тест1'),
         ast_classes.AlgEnd(2),
-        ast_classes.AlgStart(5, is_main=False, name='тест2'),
+        ast_classes.AlgStart(4, is_main=False, name='тест2'),
         ast_classes.AlgEnd(6)
     ]
 
@@ -69,10 +69,10 @@ def test_parse_call():
     parser = Parser(code)
     parsed = parser.parse()
     assert parsed == [
-        ast_classes.AlgStart(1, is_main=True, name=''),
+        ast_classes.AlgStart(0, is_main=True, name=''),
         ast_classes.Call(2, alg_name='приветствие'),
         ast_classes.AlgEnd(3),
-        ast_classes.AlgStart(6, is_main=False, name='приветствие'),
+        ast_classes.AlgStart(5, is_main=False, name='приветствие'),
         ast_classes.Output(7, exprs=[[Value('лит', 'привет')]]),
         ast_classes.AlgEnd(8)
     ]
@@ -85,8 +85,29 @@ def test_parse_alg_with_space_in_name():
     '''
     parser = Parser(code)
     parsed = parser.parse()
-    assert parsed == [ast_classes.AlgStart(1, is_main=True, name='раз два'), ast_classes.AlgEnd(2)]
+    assert parsed == [ast_classes.AlgStart(0, is_main=True, name='раз два'), ast_classes.AlgEnd(2)]
 
+def test_parse_call_alg_with_space_in_name():
+    code = '''
+    алг нач
+      тест тест
+    кон
+    алг тест тест
+    нач
+      вывод 5
+    кон'''
+    parser = Parser(code)
+    parsed = parser.parse()
+    assert parsed == [
+        ast_classes.AlgStart(1, is_main=True, name=''),
+        ast_classes.Call(2, 'тест тест'),
+        ast_classes.AlgEnd(3),
+        ast_classes.AlgStart(4, is_main=False, name='тест тест'),
+        ast_classes.Output(6, [[Value('цел', 5)]]),
+        ast_classes.AlgEnd(7),
+    ]
+
+# тесты ошибок
 
 def test_without_нач_error():
     code = '''алг

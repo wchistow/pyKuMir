@@ -87,11 +87,19 @@ def test_bool_var():
     vm.execute()
     assert print_mock.printed_text == 'да'
 
+
 def test_char_plus_char():
     bytecode = code2bc("лит а := 'а' + 'б'\nвывод а")
     vm = create_vm(*bytecode)
     vm.execute()
     assert print_mock.printed_text == 'аб'
+
+
+def test_var_with_space_in_name():
+    bytecode = code2bc('цел а б := 5\nвывод а б')
+    vm = create_vm(*bytecode)
+    vm.execute()
+    assert print_mock.printed_text == '5'
 
 # --- тесты ошибок ---
 

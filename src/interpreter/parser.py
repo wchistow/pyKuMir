@@ -14,7 +14,8 @@ token_specification = [
             ('CHAR',          r"'.'"),
             ('NUMBER',        r'\d+(\.\d*)?'),
             ('TYPE',          rf'({"|".join(TYPES)})'),
-            ('NAME',           r'[A-Za-zА-Яа-я_][A-Za-zА-Яа-я_0-9]*'),
+            ('KEYWORD',       rf'({"|".join(KEYWORDS)})'),
+            ('NAME',          r'[A-Za-zА-Яа-я_]([ A-Za-zА-Яа-я_0-9]*[A-Za-zА-Яа-я_0-9])?'),
             ('ASSIGN',        r':='),
             ('EQ',            r'='),
             ('OP',            r'(\*\*|\+|\-|\*|/|>=|<=|<>|\(|\))'),
@@ -110,37 +111,36 @@ class Parser:
     def _handle_alg_header(self, is_main: bool):
         self._next_token()
 
-        alg_name = self._parse_alg_name()
+        if self.cur_token.kind == 'NAME':
+            alg_name = self.cur_token.value
+            start_line = self.line
+        elif self.cur_token.kind == 'NEWLINE':
+            alg_name = ''
+            start_line = self.line - 1
+        elif self.cur_token.value == 'нач':
+            self.res.append(AlgStart(self.line, is_main=is_main, name=''))
+            return
+        else:
+            raise SyntaxException(self.line, self.cur_token.value)
+        self._next_token()
+
+        while self.cur_token.kind == 'NEWLINE':
+            self._next_token()
+        if self.cur_token.value != 'нач':
+            raise SyntaxException(self.line, self.cur_token.value)
+        if not alg_name and self._was_alg:
+            raise SyntaxException(self.line, self.cur_token.value, 'не указано имя алгоритма')
 
         self._next_token()
 
-        self.res.append(AlgStart(self.line - 1 if self.line > 0 else self.line, is_main=is_main, name=alg_name))
-
-    def _parse_alg_name(self) -> str:
-        alg_name = []
-        if self.cur_token.kind == 'NAME' and self.cur_token.value != 'нач':
-            alg_name.append(self.cur_token.value)
-            self._next_token()
-        while self.cur_token.kind in ('NAME', 'TYPE', 'NUMBER') and self.cur_token.value != 'нач':
-            alg_name.append(self.cur_token.value)
-            self._next_token()
-        while self.cur_token.kind == 'NEWLINE':
-            self._next_token()
-
-        if not alg_name and self._was_alg:
-            raise SyntaxException(self.line-1, 'алг', 'Не указано имя')
-
-        if self.cur_token.value == 'нач':
-            return ' '.join(alg_name)
-        elif self.cur_token.kind != 'NEWLINE':
-            raise SyntaxException(self.line, self.cur_token.value)
+        self.res.append(AlgStart(start_line, is_main=is_main, name=alg_name))
 
     def _handle_statement(self) -> None:
         if self.cur_token.kind == 'TYPE':  # объявление переменной(ых)
             self._handle_var_def()
-        elif self.cur_token.kind == 'NAME' and self.cur_token.value == 'вывод':
+        elif self.cur_token.value == 'вывод':
             self._handle_output()
-        elif self.cur_token.kind == 'NAME' and self.cur_token.value == 'ввод':
+        elif self.cur_token.value == 'ввод':
             self._handle_input()
         elif self.cur_token.kind == 'NAME':
             name = self.cur_token.value
@@ -156,14 +156,13 @@ class Parser:
 
     def _handle_var_def(self) -> None:
         typename = self.cur_token.value
-        name_s: list[str] = []
 
         self._next_token()
+        names: list[str] = []
+
         while self.cur_token.kind in ('NAME', 'COMMA'):
             if self.cur_token.kind == 'NAME':
-                if self.cur_token.value in KEYWORDS:
-                    raise SyntaxException(self.line, self.cur_token.value, 'ключевое слово в имени')
-                name_s.append(self.cur_token.value)
+                names.append(self.cur_token.value)
             self._next_token()
 
         if self.cur_token.kind == 'ASSIGN':
@@ -176,18 +175,18 @@ class Parser:
             self._next_token()
             if self.cur_token.kind != 'NEWLINE':
                 raise SyntaxException(self.line, self.cur_token.value, 'это не константа')
-            self.res.append(StoreVar(self.line - 1, typename, name_s, expr))
+            self.res.append(StoreVar(self.line - 1, typename, names, expr))
             return
         elif self.cur_token.kind == 'NEWLINE':
-            self.res.append(StoreVar(self.line - 1, typename, name_s, None))
+            self.res.append(StoreVar(self.line - 1, typename, names, None))
             return
         else:
             raise SyntaxException(self.line, self.cur_token.value)
 
-        if len(name_s) > 1 and expr:
+        if len(names) > 1 and expr:
             raise SyntaxException(self.line, ':=', 'здесь не должно быть ":="')
 
-        self.res.append(StoreVar(self.line - 1, typename, name_s, expr))
+        self.res.append(StoreVar(self.line - 1, typename, names, expr))
 
     def _handle_var_assign(self, name: str) -> None:
         self._next_token()
@@ -232,7 +231,8 @@ class Parser:
         expr = []
 
         last_kind = ''
-        while self.cur_token.kind in ('STRING', 'NAME', 'CHAR', 'NUMBER', 'OP'):
+        while (self.cur_token.kind in ('STRING', 'NAME', 'CHAR', 'NUMBER', 'OP') or
+               self.cur_token.value in ('да', 'нет', 'нс')):
             expr.append(_get_val(self.cur_token.kind, self.cur_token.value))
             self._next_token()
             if self.cur_token.kind == last_kind and self.cur_token.value not in ('(', ')'):
@@ -268,14 +268,16 @@ def _get_val(kind: str, value: str) -> Value | Op:
             return Value('цел', int(value))
     elif kind == 'STRING':
         return Value('лит', value[1:-1])
-    elif kind == 'CHAR':
-        return Value('сим', value[1:-1])
-    elif kind == 'NAME' and value in ('да', 'нет'):
-        return Value('лог', value)
     elif kind == 'NAME':
         return Value('get-name', value)
     elif kind == 'OP':
         return Op(value)
+    elif kind == 'CHAR':
+        return Value('сим', value[1:-1])
+    elif kind == 'KEYWORD' and value in ('да', 'нет'):
+        return Value('лог', value)
+    elif kind == 'KEYWORD' and value == 'нс':
+        return Value('get-name', value)
 
 
 def _get_priority(op: Op) -> int:

@@ -12,12 +12,6 @@ interpreter = importlib.import_module('interpreter')
 Parser, SyntaxException = interpreter.Parser, interpreter.SyntaxException
 
 
-def test_two_words_syntax_error():
-    parser = Parser('а б')
-    with pytest.raises(SyntaxException):
-        parser.parse()
-
-
 def test_invalid_char_syntax_error():
     parser = Parser('@')
     with pytest.raises(SyntaxException):

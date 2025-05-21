@@ -55,6 +55,12 @@ def test_const():
     parsed = parser.parse()
     assert parsed == [ast_classes.StoreVar(0, 'цел', ['а'], [Value('цел', 5)])]
 
+def test_var_with_space_in_name():
+    code = 'цел а б := 5'
+    parser = Parser(code)
+    parsed = parser.parse()
+    assert parsed == [ast_classes.StoreVar(0, 'цел', ['а б'], [Value('цел', 5)])]
+
 # --- тесты ошибок ---
 
 def test_keyword_in_name_error():
