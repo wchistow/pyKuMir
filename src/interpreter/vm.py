@@ -98,6 +98,24 @@ class VM:
             self.stack.append(Value('вещ', b.value / a.value))
         elif op == '**' and a.typename in ('цел', 'вещ'):
             self.stack.append(Value(typename, b.value ** a.value))
+        elif op == '>=' and a.typename in ('цел', 'вещ'):
+            self.stack.append(Value(typename, _bool_to_str(b.value >= a.value)))
+        elif op == '<=' and a.typename in ('цел', 'вещ'):
+            self.stack.append(Value(typename, _bool_to_str(b.value <= a.value)))
+        elif op == '=':
+            self.stack.append(Value(typename, _bool_to_str(b.value == a.value)))
+        elif op == '<>':
+            self.stack.append(Value(typename, _bool_to_str(b.value != a.value)))
+        elif op == '>':
+            self.stack.append(Value(typename, _bool_to_str(b.value > a.value)))
+        elif op == '<':
+            self.stack.append(Value(typename, _bool_to_str(b.value < a.value)))
+        elif op == 'или' and typename == 'лог':
+            self.stack.append(Value(typename, _bool_to_str(_str_to_bool(b.value) or _str_to_bool(a.value))))
+        elif op == 'и' and typename == 'лог':
+            self.stack.append(Value(typename, _bool_to_str(_str_to_bool(b.value) and _str_to_bool(a.value))))
+        else:
+            raise RuntimeException(lineno, f'нельзя "{b.typename} {op} {a.typename}"')
 
     def output(self, exprs_num: int) -> None:
         """
@@ -195,6 +213,14 @@ class VM:
         if self.call_stack:
             res |= self.call_stack[-1]
         return res
+
+
+def _str_to_bool(v: str) -> bool:
+    return v == 'да'
+
+
+def _bool_to_str(b: bool) -> str:
+    return 'да' if b else 'нет'
 
 
 def _convert_string_to_type(lineno: int, string: str, var_type: str) -> Value:

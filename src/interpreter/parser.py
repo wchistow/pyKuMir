@@ -13,12 +13,12 @@ token_specification = [
             ('STRING',        r'"[^"]*"'),
             ('CHAR',          r"'.'"),
             ('NUMBER',        r'\d+(\.\d*)?'),
+            ('OP',            r'(\*\*|\+|\-|\*|/|>=|<=|<>|>|<|\(|\)|или|и)'),
             ('TYPE',          rf'({"|".join(TYPES)})'),
             ('KEYWORD',       rf'({"|".join(KEYWORDS)})'),
             ('NAME',          r'[A-Za-zА-Яа-я_]([ A-Za-zА-Яа-я_0-9]*[A-Za-zА-Яа-я_0-9])?'),
             ('ASSIGN',        r':='),
             ('EQ',            r'='),
-            ('OP',            r'(\*\*|\+|\-|\*|/|>=|<=|<>|\(|\))'),
             ('COMMA',         r','),
             ('NEWLINE',       r'\n'),
             ('SKIP',          r'[ \t]'),
@@ -233,7 +233,7 @@ class Parser:
         expr = []
 
         last_kind = ''
-        while (self.cur_token.kind in ('STRING', 'NAME', 'CHAR', 'NUMBER', 'OP') or
+        while (self.cur_token.kind in ('STRING', 'NAME', 'CHAR', 'NUMBER', 'OP', 'EQ') or
                self.cur_token.value in ('да', 'нет', 'нс')):
             expr.append(_get_val(self.cur_token.kind, self.cur_token.value))
             self._next_token()
@@ -270,7 +270,7 @@ def _get_val(kind: str, value: str) -> Value | Op:
         return Value('лит', value[1:-1])
     elif kind == 'NAME':
         return Value('get-name', value)
-    elif kind == 'OP':
+    elif kind == 'OP' or kind == 'EQ':
         return Op(value)
     elif kind == 'CHAR':
         return Value('сим', value[1:-1])
@@ -284,6 +284,10 @@ def _get_priority(op: Op) -> int:
     """Возвращает приоритет оператора."""
     if op.op in ('*', '/', '**'):
         return 1
+    elif op.op in ('>', '<', '=', '>=', '<=', '<>'):
+        return 2
+    elif op.op in ('или', 'и'):
+        return 3
     return 0
 
 
