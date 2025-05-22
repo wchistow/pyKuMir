@@ -1,5 +1,6 @@
 from datetime import datetime
 import logging
+import sys
 
 from PyQt6.QtWidgets import (QApplication, QWidget,
                              QMenuBar, QMenu, QSplitter,
@@ -28,6 +29,11 @@ class Interface(QWidget):
         self.file_menu.addAction('Выход', self.close)
         self.menu_bar.addMenu(self.file_menu)
 
+        self.help_menu = QMenu('Помощь')
+        self.help_menu.addAction('Документация', self.docview.show)
+        self.help_menu.addAction('О программе', self.show_about)
+        self.menu_bar.addMenu(self.help_menu)
+
         self.buttons = QHBoxLayout()
         self.run_button = QPushButton('запустить')
         self.run_button.clicked.connect(self.run_code)
@@ -50,6 +56,10 @@ class Interface(QWidget):
         self.setMinimumSize(600, 500)
 
         self.setLayout(self.grid)
+
+    def show_about(self):
+        QMessageBox.information(self, 'О программе', self.ABOUT,
+                                QMessageBox.StandardButton.Close)
 
     def run_code(self):
         code = self.codeinput.toPlainText()
