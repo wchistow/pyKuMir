@@ -24,7 +24,7 @@ token_specification = [
             ('SKIP',          r'[ \t]'),
             ('OTHER',         r'.'),
 ]
-TOK_REGEX = '|'.join('(?P<%s>%s)' % pair for pair in token_specification)
+TOK_REGEX = '|'.join('(?P<{}>{})'.format(*pair) for pair in token_specification)
 
 
 @dataclass
@@ -222,8 +222,10 @@ class Parser:
             if last == self.cur_token.kind:
                 raise SyntaxException(self.line, self.cur_token.value)
             last = self.cur_token.kind
-        if self.cur_token.kind != 'NEWLINE' or not targets:
+        if not targets:
             raise SyntaxException(self.line, self.cur_token.value, 'куда вводить?')
+        elif self.cur_token.kind != 'NEWLINE':
+            raise SyntaxException(self.line, self.cur_token.value)
 
         self.res.append(Input(self.line - 1, targets))
 
@@ -250,8 +252,7 @@ class Parser:
         self._next_token()
         if self.cur_token.kind in ('STRING', 'NAME', 'CHAR', 'NUMBER'):
             return [_get_val(self.cur_token.kind, self.cur_token.value)]
-        else:
-            raise SyntaxException(self.line, self.cur_token.value)
+        raise SyntaxException(self.line, self.cur_token.value)
 
 
 def _get_val(kind: str, value: str) -> Value | Op:
@@ -264,8 +265,7 @@ def _get_val(kind: str, value: str) -> Value | Op:
     if kind == 'NUMBER':
         if '.' in value:
             return Value('вещ', float(value))
-        else:
-            return Value('цел', int(value))
+        return Value('цел', int(value))
     elif kind == 'STRING':
         return Value('лит', value[1:-1])
     elif kind == 'NAME':
