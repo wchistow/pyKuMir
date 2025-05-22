@@ -18,6 +18,7 @@ from interpreter import code2bc, SyntaxException, RuntimeException, VM
 class Interface(QWidget):
     def __init__(self, program_version: str, parent=None):
         super().__init__(parent)
+        self.ABOUT = f'pyKuMir v{program_version}\n\nВерсия Python: {sys.version}\nПлатформа: {sys.platform}'
         self.setWindowTitle(f'pyKuMir v{program_version}')
         self.resize(800, 600)
 
@@ -60,6 +61,17 @@ class Interface(QWidget):
     def show_about(self):
         QMessageBox.information(self, 'О программе', self.ABOUT,
                                 QMessageBox.StandardButton.Close)
+
+    def _input_from_console(self) -> str:
+        # self.console.input_line = self.console.toPlainText().count('\n')
+        # self.console.input_completed = False
+        # while True:
+        #     if self.console.input_completed:
+        #         return self.inputted_text
+        QMessageBox.warning(self, 'Не поддерживаемая функциональность',
+                            'В данный момент ключевое слово "ввод" не поддерживается.',
+                            buttons=QMessageBox.StandardButton.Ok)
+        return self.inputted_text
 
     def run_code(self):
         code = self.codeinput.toPlainText()
