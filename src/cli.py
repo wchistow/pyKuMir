@@ -36,14 +36,12 @@ def main(argv):
 def run_program(code: str, debug: bool):
     parser = Parser(code, debug)
     parsed = parser.parse()
-    bc = build_bytecode(parsed)
     if debug:
         print(parsed)
         print('-'*40)
-        pretty_print_bc(bc[0])
-        for name, alg in bc[1].items():
-            print(f'{name!r}:')
-            pretty_print_bc(alg, indent=4)
+    bc = build_bytecode(parsed)
+    if debug:
+        pretty_print_bc(bc[0], bc[1])
         print('-' * 40)
     vm = VM(bc[0], output_f=lambda s: print(s, end=''), input_f=input, algs=bc[1])
     vm.execute()

@@ -5,7 +5,7 @@ import sys
 from PyQt6.QtWidgets import (QApplication, QWidget,
                              QMenuBar, QMenu, QSplitter,
                              QHBoxLayout, QGridLayout,
-                             QPushButton)
+                             QPushButton, QMessageBox)
 from PyQt6.QtCore import Qt
 
 from .codeinput import CodeInput
@@ -19,6 +19,9 @@ class Interface(QWidget):
     def __init__(self, program_version: str, parent=None):
         super().__init__(parent)
         self.ABOUT = f'pyKuMir v{program_version}\n\nВерсия Python: {sys.version}\nПлатформа: {sys.platform}'
+
+        self.inputted_text = ''
+
         self.setWindowTitle(f'pyKuMir v{program_version}')
         self.resize(800, 600)
 
@@ -77,14 +80,16 @@ class Interface(QWidget):
         code = self.codeinput.toPlainText()
         self.console.output_sys(f'>> {datetime.now().strftime("%H:%M:%S")} - Новая программа - Начало выполнения\n')
         try:
-            bc = code_to_bytecode(code)
+            bc = code2bc(code)
         except SyntaxException as e:
             print(e.args)
         else:
-            vm = VM(self.console.output)
+            vm = VM(bytecode=bc[0],
+                    output_f=self.console.output,
+                    input_f=self._input_from_console,
+                    algs=bc[1])
             try:
-                for inst in bc:
-                    vm.execute([inst])
+                vm.execute()
             except RuntimeException as e:
                 print(e.args)
         self.console.output_sys(f'\n>> {datetime.now().strftime("%H:%M:%S")} - Новая программа - Выполнение завершено\n')
