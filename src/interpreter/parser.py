@@ -3,14 +3,15 @@ from dataclasses import dataclass
 import re
 from typing import Iterable
 
-from .ast_classes import AlgStart, AlgEnd, Statement, StoreVar, Op, Output, Call, Input
+from .ast_classes import (AlgStart, AlgEnd, Call, Input, IfStart,
+                          IfEnd, Statement, StoreVar, Op, Output)
 from .constants import KEYWORDS, TYPES
 from .value import Value
 from .exceptions import SyntaxException
 
 token_specification = [
             ('COMMENT',       r'\|.*'),
-            ('STRING',        r'"[^"]*"'),
+            ('STRING',        r'"[^"\n]*"'),
             ('CHAR',          r"'.'"),
             ('NUMBER',        r'\d+(\.\d*)?'),
             ('OP',            r'(\*\*|\+|\-|\*|/|>=|<=|<>|>|<|\(|\)|или|и)'),
@@ -24,7 +25,7 @@ token_specification = [
             ('SKIP',          r'[ \t]'),
             ('OTHER',         r'.'),
 ]
-TOK_REGEX = '|'.join('(?P<{}>{})'.format(*pair) for pair in token_specification)
+TOK_REGEX = '|'.join(f'(?P<{name}>{regex})' for name, regex in token_specification)
 
 
 @dataclass
@@ -38,6 +39,7 @@ class Env(Enum):
     INTRODUCTION = auto()
     MAIN = auto()
     ALG = auto()
+    IF = auto()
 
 
 class Parser:
@@ -57,7 +59,7 @@ class Parser:
     def _next_token(self) -> None:
         mo = next(self.tokens)
         self.cur_token = Token(mo.lastgroup, mo.group())
-        if self.cur_token.kind == 'SKIP':
+        if self.cur_token.kind in ('SKIP', 'COMMENT'):
             self._next_token()
             return
         if self.cur_token.kind == 'NEWLINE':
@@ -71,7 +73,8 @@ class Parser:
             self._parse()
         except StopIteration:
             if self.envs and self.envs[-1] == Env.MAIN:
-                raise SyntaxException(self.line, '\n', 'нет "кон" после "нач"') from None
+                raise SyntaxException(self.line, '\n',
+                                      'нет "кон" после "нач"') from None
             if self.debug:
                 print('-' * 40)
 
@@ -129,7 +132,8 @@ class Parser:
         if self.cur_token.value != 'нач':
             raise SyntaxException(self.line, self.cur_token.value)
         if not alg_name and self._was_alg:
-            raise SyntaxException(self.line, self.cur_token.value, 'не указано имя алгоритма')
+            raise SyntaxException(self.line, self.cur_token.value,
+                                  'не указано имя алгоритма')
 
         self._next_token()
 
@@ -142,6 +146,11 @@ class Parser:
             self._handle_output()
         elif self.cur_token.value == 'ввод':
             self._handle_input()
+        elif self.cur_token.value == 'если' and Env.INTRODUCTION not in self.envs:
+            self._handle_if()
+        elif self.cur_token.value == 'все' and self.envs[-1] == Env.IF:
+            self.envs.pop()
+            self.res.append(IfEnd(self.line))
         elif self.cur_token.kind == 'NAME':
             name = self.cur_token.value
             self._next_token()
@@ -228,6 +237,16 @@ class Parser:
             raise SyntaxException(self.line, self.cur_token.value)
 
         self.res.append(Input(self.line - 1, targets))
+
+    def _handle_if(self):
+        self._next_token()
+        expr = self._parse_expr()
+        if self.cur_token.value != 'то':
+            raise SyntaxException(self.line, self.cur_token.value)
+
+        self.envs.append(Env.IF)
+        self.res.append(IfStart(self.line, expr))
+        self._next_token()
 
     def _parse_expr(self) -> list[Value | Op]:
         expr = []

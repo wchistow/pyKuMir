@@ -43,3 +43,12 @@ class AlgEnd(Statement):
 class Call(Statement):
     lineno: int
     alg_name: str
+
+@dataclass
+class IfStart(Statement):
+    lineno: int
+    cond: Expr
+
+@dataclass
+class IfEnd(Statement):
+    lineno: int

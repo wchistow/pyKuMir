@@ -12,7 +12,7 @@ class VM:
                  bytecode: list[BytecodeType],
                  output_f: Callable[[str], None],
                  input_f: Callable[[], str],
-                 algs: dict[str, list[BytecodeType]] | None = None) -> None:
+                 algs: dict[str, list[BytecodeType, list[int]]] | None = None) -> None:
         """
         :param bytecode: список команд байт-кода
         :param output_f: функция, в неё передаётся строка для вывода
@@ -30,25 +30,32 @@ class VM:
         self.call_stack: list[Namespace] = []  # Локальные переменные текущих функций
         self.in_alg = False
 
+        self.cur_tags: list[int] = []
+        self.cur_inst_n = 0
+
         self.CALL_TRANSITIONS = {
-            Bytecode.LOAD: lambda inst: self.stack.append(inst[2][0]),
+            Bytecode.LOAD_CONST: lambda inst: self.stack.append(inst[2][0]),
             Bytecode.LOAD_NAME: lambda inst: self.stack.append(self.get_var(inst[0], inst[2][0])),
             Bytecode.BIN_OP: lambda inst: self.bin_op(inst[0], inst[2][0]),
             Bytecode.STORE: lambda inst: self.store_var(inst[0], inst[2][0], inst[2][1]),
             Bytecode.OUTPUT: lambda inst: self.output(inst[2][0]),
             Bytecode.INPUT: lambda inst: self.input(inst[0], inst[2]),
             Bytecode.CALL: lambda inst: self.call(inst[0], inst[2][0]),
-            Bytecode.RET: lambda inst: self.call_stack.pop()
+            Bytecode.RET: lambda inst: self.call_stack.pop(),
+            Bytecode.JUMP_TAG_IF_FALSE: lambda inst: self.jump_tag_if_false(inst[0], inst[2][0])
         }
 
     def execute(self) -> None:
         self._execute(self.bytecode)
 
     def _execute(self, bc: list[BytecodeType]) -> None:
-        for inst in bc:
+        while self.cur_inst_n < len(bc):
+            inst = bc[self.cur_inst_n]
             self.CALL_TRANSITIONS[inst[1]](inst)
             if inst[1] == Bytecode.RET:
                 break
+            if inst[1] != Bytecode.JUMP_TAG_IF_FALSE:
+                self.cur_inst_n += 1
 
     def store_var(self, lineno: int, typename: str | None, names: tuple[str]) -> None:
         """
@@ -99,21 +106,27 @@ class VM:
         elif op == '**' and a.typename in ('цел', 'вещ'):
             self.stack.append(Value(typename, b.value ** a.value))
         elif op == '>=' and a.typename in ('цел', 'вещ'):
-            self.stack.append(Value(typename, _bool_to_str(b.value >= a.value)))
+            self.stack.append(Value('лог', _bool_to_str(b.value >= a.value)))
         elif op == '<=' and a.typename in ('цел', 'вещ'):
-            self.stack.append(Value(typename, _bool_to_str(b.value <= a.value)))
+            self.stack.append(Value('лог', _bool_to_str(b.value <= a.value)))
         elif op == '=':
-            self.stack.append(Value(typename, _bool_to_str(b.value == a.value)))
+            self.stack.append(Value('лог', _bool_to_str(b.value == a.value)))
         elif op == '<>':
-            self.stack.append(Value(typename, _bool_to_str(b.value != a.value)))
+            self.stack.append(Value('лог', _bool_to_str(b.value != a.value)))
         elif op == '>':
-            self.stack.append(Value(typename, _bool_to_str(b.value > a.value)))
+            self.stack.append(Value('лог', _bool_to_str(b.value > a.value)))
         elif op == '<':
-            self.stack.append(Value(typename, _bool_to_str(b.value < a.value)))
+            self.stack.append(Value('лог', _bool_to_str(b.value < a.value)))
         elif op == 'или' and typename == 'лог':
-            self.stack.append(Value(typename, _bool_to_str(_str_to_bool(b.value) or _str_to_bool(a.value))))
+            self.stack.append(Value(
+                'лог',
+                _bool_to_str(_str_to_bool(b.value) or _str_to_bool(a.value)))
+            )
         elif op == 'и' and typename == 'лог':
-            self.stack.append(Value(typename, _bool_to_str(_str_to_bool(b.value) and _str_to_bool(a.value))))
+            self.stack.append(Value(
+                'лог',
+                _bool_to_str(_str_to_bool(b.value) and _str_to_bool(a.value)))
+            )
         else:
             raise RuntimeException(lineno, f'нельзя "{b.typename} {op} {a.typename}"')
 
@@ -164,9 +177,20 @@ class VM:
         if name in self.algs:
             self.in_alg = True
             self.call_stack.append({})
-            self._execute(self.algs[name])
+            self.cur_tags = self.algs[name][1]
+            self.cur_inst_n = 0
+            self._execute(self.algs[name][0])
         else:
             raise RuntimeException(lineno, f'имя {name} не определено')
+
+    def jump_tag_if_false(self, lineno: int, tag: int) -> None:
+        cond = self.stack.pop()
+        if cond.typename != 'лог':
+            raise RuntimeException(lineno, 'условие после "если" не логическое')
+        if cond.value != 'да':
+            self.cur_inst_n = self.cur_tags[tag]
+        else:
+            self.cur_inst_n += 1
 
     def _save_var(self, lineno: int, typename: str, name: str, value: Value | None) -> None:
         """
