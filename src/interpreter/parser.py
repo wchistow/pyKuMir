@@ -4,7 +4,7 @@ import re
 from typing import Iterable
 
 from .ast_classes import (AlgStart, AlgEnd, Call, Input, IfStart,
-                          IfEnd, Statement, StoreVar, Op, Output)
+                          IfEnd, Statement, StoreVar, Op, Output, ElseStart)
 from .constants import KEYWORDS, TYPES
 from .value import Value
 from .exceptions import SyntaxException
@@ -14,9 +14,9 @@ token_specification = [
             ('STRING',        r'"[^"\n]*"'),
             ('CHAR',          r"'.'"),
             ('NUMBER',        r'\d+(\.\d*)?'),
-            ('OP',            r'(\*\*|\+|\-|\*|/|>=|<=|<>|>|<|\(|\)|или|и)'),
             ('TYPE',          rf'({"|".join(TYPES)})'),
             ('KEYWORD',       rf'({"|".join(KEYWORDS)})'),
+            ('OP',            r'(\*\*|\+|\-|\*|/|>=|<=|<>|>|<|\(|\)|или|и)'),
             ('NAME',          r'[A-Za-zА-Яа-я_]([ A-Za-zА-Яа-я_0-9]*[A-Za-zА-Яа-я_0-9])?'),
             ('ASSIGN',        r':='),
             ('EQ',            r'='),
@@ -148,6 +148,8 @@ class Parser:
             self._handle_input()
         elif self.cur_token.value == 'если' and Env.INTRODUCTION not in self.envs:
             self._handle_if()
+        elif self.cur_token.value == 'иначе' and self.envs[-1] == Env.IF:
+            self.res.append(ElseStart(self.line))
         elif self.cur_token.value == 'все' and self.envs[-1] == Env.IF:
             self.envs.pop()
             self.res.append(IfEnd(self.line))

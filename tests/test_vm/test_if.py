@@ -20,6 +20,10 @@ def create_vm(bc, algs):
     return VM(bc, output_f=print_mock.print, input_f=lambda: '', algs=algs)
 
 
+def setup_function(func) -> None:
+    print_mock.printed_text = ''
+
+
 def test_simple_if():
     bc = code2bc('''
     алг нач
@@ -31,3 +35,51 @@ def test_simple_if():
     vm.execute()
 
     assert print_mock.printed_text == '1'
+
+
+def test_if_with_else():
+    bc = code2bc('''
+    алг нач
+        если 2 < 1 то
+            вывод 1
+        иначе
+            вывод 2
+        все
+    кон''')
+    vm = create_vm(*bc)
+    vm.execute()
+
+    assert print_mock.printed_text == '2'
+
+
+def test_if_with_else_and_code_after():
+    bc = code2bc('''
+    алг нач
+        если 2 < 1 то
+            вывод 1
+        иначе
+            вывод 2
+        все
+        вывод 0
+    кон''')
+    vm = create_vm(*bc)
+    vm.execute()
+
+    assert print_mock.printed_text == '20'
+
+
+def test_if_with_inner_if():
+    bc = code2bc('''
+    алг нач
+        если нет то
+            вывод 1
+        иначе
+            если да то
+                вывод 2
+            все
+        все
+    кон''')
+    vm = create_vm(*bc)
+    vm.execute()
+
+    assert print_mock.printed_text == '2'

@@ -42,8 +42,11 @@ class VM:
             Bytecode.INPUT: lambda inst: self.input(inst[0], inst[2]),
             Bytecode.CALL: lambda inst: self.call(inst[0], inst[2][0]),
             Bytecode.RET: lambda inst: self.call_stack.pop(),
+            Bytecode.JUMP_TAG: lambda inst: self.jump_tag(inst[2][0]),
             Bytecode.JUMP_TAG_IF_FALSE: lambda inst: self.jump_tag_if_false(inst[0], inst[2][0])
         }
+
+        self.INSTS_WITHOUT_INCREASE_COUNTER = {Bytecode.JUMP_TAG, Bytecode.JUMP_TAG_IF_FALSE}
 
     def execute(self) -> None:
         self._execute(self.bytecode)
@@ -54,7 +57,7 @@ class VM:
             self.CALL_TRANSITIONS[inst[1]](inst)
             if inst[1] == Bytecode.RET:
                 break
-            if inst[1] != Bytecode.JUMP_TAG_IF_FALSE:
+            if inst[1] not in self.INSTS_WITHOUT_INCREASE_COUNTER:
                 self.cur_inst_n += 1
 
     def store_var(self, lineno: int, typename: str | None, names: tuple[str]) -> None:
@@ -183,12 +186,15 @@ class VM:
         else:
             raise RuntimeException(lineno, f'имя {name} не определено')
 
+    def jump_tag(self, tag: int) -> None:
+        self.cur_inst_n = self.cur_tags[tag]
+
     def jump_tag_if_false(self, lineno: int, tag: int) -> None:
         cond = self.stack.pop()
         if cond.typename != 'лог':
             raise RuntimeException(lineno, 'условие после "если" не логическое')
         if cond.value != 'да':
-            self.cur_inst_n = self.cur_tags[tag]
+            self.jump_tag(tag)
         else:
             self.cur_inst_n += 1
 

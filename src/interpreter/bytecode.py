@@ -12,7 +12,8 @@ class Bytecode(Enum):
     RET = 0x06
     OUTPUT = 0x07
     INPUT = 0x08
-    JUMP_TAG_IF_FALSE = 0x09
+    JUMP_TAG = 0x09
+    JUMP_TAG_IF_FALSE = 0x10
 
 
 BytecodeType = tuple[int, Bytecode, tuple[Value | None | tuple[Value], ...]]

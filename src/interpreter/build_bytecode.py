@@ -1,4 +1,5 @@
-from .ast_classes import StoreVar, Output, Op, AlgStart, AlgEnd, Call, Input, IfStart, IfEnd
+from .ast_classes import (StoreVar, Output, Op, AlgStart, AlgEnd, Call,
+                          Input, IfStart, IfEnd, ElseStart)
 from .bytecode import Bytecode, BytecodeType
 from .value import Value
 
@@ -23,6 +24,8 @@ class BytecodeBuilder:
     def build(self, parsed_code: list) -> tuple[list[BytecodeType], dict]:
         main_alg: str | None = None
         last_line = 0
+
+        if_indent = 0
 
         for stmt in parsed_code:
             if self.cur_alg is not None:
@@ -50,6 +53,7 @@ class BytecodeBuilder:
                 self.cur_alg = stmt.name
                 if stmt.is_main:
                     main_alg = stmt.name
+                self.cur_inst_n = 0
             elif isinstance(stmt, AlgEnd):
                 cur_ns.append((stmt.lineno, Bytecode.RET, ()))
                 self.cur_inst_n += 1
@@ -60,12 +64,21 @@ class BytecodeBuilder:
                 cur_ns.append((stmt.lineno, Bytecode.CALL, (stmt.alg_name,)))
                 self.cur_inst_n += 1
             elif isinstance(stmt, IfStart):
+                if if_indent:
+                    self.cur_tags.append(self.cur_inst_n)
                 cur_ns.extend(self._expr_bc(stmt.lineno, stmt.cond))
                 cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG_IF_FALSE, (self.cur_tag_n,)))
                 self.cur_inst_n += 1
                 self.cur_tag_n += 1
+                if_indent += 1
+            elif isinstance(stmt, ElseStart):
+                cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG, (self.cur_tag_n,)))
+                self.cur_inst_n += 1
+                self.cur_tag_n += 1
+                self.cur_tags.append(self.cur_inst_n)
             elif isinstance(stmt, IfEnd):
                 self.cur_tags.append(self.cur_inst_n)
+                if_indent -= 1
 
             last_line = stmt.lineno
 

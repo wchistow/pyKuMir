@@ -52,3 +52,7 @@ class IfStart(Statement):
 @dataclass
 class IfEnd(Statement):
     lineno: int
+
+@dataclass
+class ElseStart(Statement):
+    lineno: int

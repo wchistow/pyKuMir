@@ -3,4 +3,4 @@ class PrintMock:
         self.printed_text = ''
 
     def print(self, s: str) -> None:
-        self.printed_text = s
+        self.printed_text += s
