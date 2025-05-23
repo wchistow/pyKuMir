@@ -1,3 +1,4 @@
+from PyQt6.QtGui import QFontMetricsF, QFont
 from PyQt6.QtWidgets import QTextEdit
 
 from .lexer import highlight_text
@@ -11,6 +12,10 @@ class CodeInput(QTextEdit):
         cursor = self.textCursor()
         cursor.setPosition(14)
         self.setTextCursor(cursor)
+
+        font = self.font()
+        font_metrics = QFontMetricsF(font)
+        self.setTabStopDistance(4 * font_metrics.averageCharWidth())
 
     def keyPressEvent(self, event) -> None:
         super().keyPressEvent(event)

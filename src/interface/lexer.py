@@ -6,13 +6,18 @@ from pygments.token import Comment, Keyword, Number, Text, String
 from interpreter.constants import KEYWORDS, TYPES
 
 CSS = '''<style>
+/* Ключевые слова */
 .k {
     font-weight: bold;
 }
-.s {
+
+/* Строки и числа */
+.s, .m {
     font-weight: bold;
     color: blue;
 }
+
+/* Комментарии */
 .c {
     font-weight: bold;
     font-style: italic;
