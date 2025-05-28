@@ -15,8 +15,7 @@ jobs:
       - name: Build
         run: |
           pwd
-          ls debian/
-          ls debian/DEBIAN/
+          ls
           dpkg-deb -b debian pykumir.deb
       - name: Install gh cli
         uses: sersoft-gmbh/setup-gh-cli-action@v2
