@@ -1,6 +1,8 @@
 from datetime import datetime
+import locale
 import logging
 import sys
+import platform
 from traceback import format_exception
 
 from PyQt6.QtGui import QFont
@@ -36,10 +38,10 @@ from interpreter import code2bc, SyntaxException, RuntimeException, VM
 
 
 ABOUT = f'''
-Версия Python: {sys.version}
-Реализация: {sys.implementation.name}
-Платформа: {sys.platform}
-Кодировка: {sys.getdefaultencoding()}
+Версия Python: {platform.python_version()}
+Реализация: {platform.python_implementation()}
+Платформа: {platform.platform()}
+Кодировка: {locale.getencoding()}
 
 Версия Qt: {QT_VERSION_STR}
 Версия PyQt: {PYQT_VERSION_STR}
@@ -129,6 +131,7 @@ class Interface(QWidget):
 
 def run(program_version: str):
     logging.info('Запуск приложения...')
+    logging.info(ABOUT)
 
     app = QApplication([])
 
