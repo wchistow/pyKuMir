@@ -1,0 +1,38 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - 'master'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Prepare
+        run: |
+          sudo apt-get update
+      - name: Build
+        run: |
+          dpkg-deb -b ./debian/ ./pykumir.deb
+      - name: Install gh cli
+        uses: sersoft-gmbh/setup-gh-cli-action@v2
+        with:
+          version: stable
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Delete existing tag/release
+        run: gh release delete ${{ github.ref_name }}.${{ inputs.mint_version }} --cleanup-tag || true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Wait a few moments...
+        run: |
+          sleep 20
+      - name: Create release
+        uses: ncipollo/release-action@v1.14.0
+        with:
+          token: "${{ secrets.GITHUB_TOKEN }}"
+          artifacts: "./pykumir.deb"
+          tag: ${{ github.ref_name }}.${{ inputs.mint_version }}
+          commit: ${{ github.sha }}
+          artifactErrorsFailBuild: true
+          makeLatest: true

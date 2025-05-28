@@ -22,6 +22,18 @@ python src/cli.py файл.kum
 
 ## Установка
 
+### Debian и основанные на нём дистрибутивы:
+
+После клонирования репозитория введите
+
+```sh
+cd pykumir
+dpkg-deb -b ./debian/ pykumir.deb  # Сборка deb-пакета
+sudo apt install ./pykumir.deb
+```
+
+*После появления стабильной версии deb-пакет можно будет скачать на странице релизов.*
+
 ### Зависимости:
 
  + Python>=3.10
@@ -41,26 +53,22 @@ pip install Pygments>=2.2 PyQt6
 
 #### Qt6
 
-Debian и основанные на нём (Ubuntu, Linux Mint, Kali Linux, ...):
-```sh
-sudo apt install qt6-base-dev
-```
-RHEL и основанные на нём (Fedora Linux, CentOS, РЕД ОС, ROSA Linux, Alt Linux, ...):
-```sh
-sudo dnf install qt6-qtbase-devel
-```
-Arch и основанные на нём (Manjaro Linux, EndeavourOS, Garuda Linux, CachyOS, ...):
-```sh
-sudo pacman -S qt6-base
-```
+ + RHEL и основанные на нём (Fedora Linux, CentOS, РЕД ОС, ROSA Linux, Alt Linux, ...):
+   ```sh
+   sudo dnf install qt6-qtbase-devel
+   ```
+ + Arch и основанные на нём (Manjaro Linux, EndeavourOS, Garuda Linux, CachyOS, ...):
+   ```sh
+   sudo pacman -S qt6-base
+   ```
 
 ---
 
 *Для справки: версии основных дистрибутивов с доступными необходимыми версиями пакетов (python3.10 и qt6):*
 
- + Debian 12+
- + Ubuntu 22.04+
- + RHEL 9+
+ + Debian >= 12
+ + Ubuntu >= 22.04
+ + RHEL >= 9.0
 
 ## Текущие возможности языка:
 

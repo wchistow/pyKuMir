@@ -1,0 +1,9 @@
+#!/usr/bin/python3
+import os
+import sys
+
+if __name__ == '__main__':
+    file = 'cli.py' if len(sys.argv) > 1 else 'main.py'
+    command = f'/usr/lib/pykumir/{file} ' + ' '.join(sys.argv[1:])
+
+    os.system(command)
