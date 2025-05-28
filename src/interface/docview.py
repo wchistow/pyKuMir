@@ -25,7 +25,7 @@ class DocView(QWidget):
             self.tree.addTopLevelItem(item)
             if item.text(0) == '../docs/lang/README.md':
                 self.tree.setCurrentItem(item)
-        self.tree.selectionModel().selectionChanged.connect(self.onSelectionChanged)
+        self.tree.selectionModel().selectionChanged.connect(self.on_selection_changed)
 
         self.textview = QTextEdit(self)
         self.textview.setReadOnly(True)
@@ -43,7 +43,7 @@ class DocView(QWidget):
 
         self.setLayout(self.grid)
 
-    def onSelectionChanged(self):
+    def on_selection_changed(self):
         with open(self.tree.selectedIndexes()[0].data()) as f:
             text = f.read()
 

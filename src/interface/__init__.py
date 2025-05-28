@@ -109,7 +109,6 @@ class Interface(QWidget):
         return self.inputted_text
 
     def run_code(self):
-        print(a)
         code = self.codeinput.toPlainText()
         self.console.output_sys(f'>> {datetime.now().strftime("%H:%M:%S")} - Новая программа - Начало выполнения\n')
         try:
