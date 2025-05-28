@@ -1,12 +1,32 @@
 from datetime import datetime
 import logging
 import sys
+from traceback import format_exception
 
-from PyQt6.QtWidgets import (QApplication, QWidget,
-                             QMenuBar, QMenu, QSplitter,
-                             QHBoxLayout, QGridLayout,
-                             QPushButton, QMessageBox)
-from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QFont
+from PyQt6.QtWidgets import (QApplication, QWidget, QMenuBar, QMenu, QSplitter,
+                             QHBoxLayout, QGridLayout, QPushButton, QMessageBox)
+from PyQt6.QtCore import Qt, QT_VERSION_STR, PYQT_VERSION_STR
+
+
+def on_error(err_type, err, tb):
+    err_msg = ''.join(format_exception(err_type, err, tb))
+    logging.critical('\n' + err_msg)
+
+    font = QFont()
+    font.setFamily('Monospace')
+
+    msg = QMessageBox()
+    msg.setIcon(QMessageBox.Icon.Critical)
+    msg.setText(err_msg)
+    msg.setWindowTitle('Критическая ошибка в программе')
+    msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+    msg.setFont(font)
+    msg.exec()
+    exit(1)
+
+
+sys.excepthook = on_error
 
 from .codeinput import CodeInput
 from .console import Console
@@ -15,10 +35,21 @@ from .docview import DocView
 from interpreter import code2bc, SyntaxException, RuntimeException, VM
 
 
+ABOUT = f'''
+Версия Python: {sys.version}
+Реализация: {sys.implementation.name}
+Платформа: {sys.platform}
+Кодировка: {sys.getdefaultencoding()}
+
+Версия Qt: {QT_VERSION_STR}
+Версия PyQt: {PYQT_VERSION_STR}
+'''
+
+
 class Interface(QWidget):
     def __init__(self, program_version: str, parent=None):
         super().__init__(parent)
-        self.ABOUT = f'pyKuMir v{program_version}\n\nВерсия Python: {sys.version}\nПлатформа: {sys.platform}'
+        self.ABOUT = f'pyKuMir v{program_version}\n{ABOUT}'
 
         self.inputted_text = ''
 
@@ -35,6 +66,7 @@ class Interface(QWidget):
 
         self.help_menu = QMenu('Помощь')
         self.help_menu.addAction('Документация', self.docview.show)
+        self.help_menu.addAction('О Qt', lambda: QMessageBox.aboutQt(self, 'О Qt'))
         self.help_menu.addAction('О программе', self.show_about)
         self.menu_bar.addMenu(self.help_menu)
 
@@ -77,6 +109,7 @@ class Interface(QWidget):
         return self.inputted_text
 
     def run_code(self):
+        print(a)
         code = self.codeinput.toPlainText()
         self.console.output_sys(f'>> {datetime.now().strftime("%H:%M:%S")} - Новая программа - Начало выполнения\n')
         try:

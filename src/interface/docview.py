@@ -1,9 +1,8 @@
 import os
 
-from PyQt6 import QtGui
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QTextDocument
-from PyQt6.QtWidgets import QWidget, QTextEdit, QTreeView, QSplitter, QGridLayout
+from PyQt6.QtWidgets import QWidget, QTextEdit, QSplitter, QGridLayout, QTreeWidget, QTreeWidgetItem
 
 
 class DocView(QWidget):
@@ -19,14 +18,13 @@ class DocView(QWidget):
 
         self.view.setMarkdown(text)
 
-        self.tree = QTreeView(self)
-        model = QtGui.QStandardItemModel()
+        self.tree = QTreeWidget(self)
         for f in _get_all_files('../docs'):
-            child_item = QtGui.QStandardItem(f)
-            child_item.setEditable(False)
-            model.invisibleRootItem().appendRow(child_item)
-        self.tree.setModel(model)
-        self.tree.expandAll()
+            item = QTreeWidgetItem(self.tree)
+            item.setText(0, f)
+            self.tree.addTopLevelItem(item)
+            if item.text(0) == '../docs/lang/README.md':
+                self.tree.setCurrentItem(item)
         self.tree.selectionModel().selectionChanged.connect(self.onSelectionChanged)
 
         self.textview = QTextEdit(self)
