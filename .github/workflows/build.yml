@@ -12,16 +12,24 @@ jobs:
       - name: Prepare
         run: |
           sudo apt-get update
-      - name: Build
-        run: |
-          dpkg-deb -b ./debian ./pykumir.deb
+      - uses: jiro4989/build-deb-action@v4
+        with:
+          package: pykumir
+          package_root: debian
+          maintainer: 'Vladimir Chistov <wchistow@yandex.ru>'
+          version: '1.0.0a'
+          arch: 'all'
+          depends: 'python3 (>= 3.10), qt6-base-dev, python3-pyqt6, python3-pygments (>= 2.2)'
+          desc: 'Клон КуМир, написанный на Python'
+          priority: 'optional'
+        id: build
       - name: Install gh cli
         uses: sersoft-gmbh/setup-gh-cli-action@v2
         with:
           version: stable
           github-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Delete existing tag/release
-        run: gh release delete ${{ github.ref_name }}.${{ inputs.mint_version }} --cleanup-tag || true
+      - name: Delete existing release
+        run: gh release delete ${{ github.ref_name }}.1.0.0a --cleanup-tag || true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Wait a few moments...
@@ -31,8 +39,8 @@ jobs:
         uses: ncipollo/release-action@v1.14.0
         with:
           token: "${{ secrets.GITHUB_TOKEN }}"
-          artifacts: "./pykumir.deb"
-          tag: ${{ github.ref_name }}.${{ inputs.mint_version }}
+          artifacts: ${{ steps.build.outputs.file_name }}
+          tag: '1.0.0a'
           commit: ${{ github.sha }}
           artifactErrorsFailBuild: true
           makeLatest: true
