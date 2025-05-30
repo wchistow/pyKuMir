@@ -14,15 +14,16 @@ token_specification = [
             ('STRING',        r'"[^"\n]*"'),
             ('CHAR',          r"'.'"),
             ('NUMBER',        r'\d+(\.\d*)?'),
-            ('TYPE',          rf'(\b{r"\b|\b".join(TYPES)}\b)'),
-            ('KEYWORD',       rf'(\b{r"\b|\b".join(KEYWORDS)}\b)'),
+            # В Python 3.10 и 3.11 символов `\` в f-строках быть не может
+            ('TYPE',          r'(\b' + r'\b|\b'.join(TYPES) + r'\b)'),
+            ('KEYWORD',       r'(\b' + r'\b|\b'.join(KEYWORDS) + r'\b)'),
             ('OP',            r'(\*\*|\+|\-|\*|/|>=|<=|<>|>|<|\(|\)|\bили\b|\bи\b)'),
             ('NAME',          r'[A-Za-zА-Яа-я_]([ A-Za-zА-Яа-я_0-9]*[A-Za-zА-Яа-я_0-9])?'),
             ('ASSIGN',        r':='),
             ('EQ',            r'='),
             ('COMMA',         r','),
             ('NEWLINE',       r'\n'),
-            ('SKIP',          r'[ \t]'),
+            ('SKIP',          r'[ \t]+'),
             ('OTHER',         r'.'),
 ]
 TOK_REGEX = '|'.join(f'(?P<{name}>{regex})' for name, regex in token_specification)
