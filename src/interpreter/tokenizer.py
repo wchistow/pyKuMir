@@ -40,13 +40,14 @@ class Tokenizer:
     def tokenize(self) -> Iterator[Token]:
         for mo in re.finditer(TOK_REGEX, self.code):
             kind, value = mo.lastgroup, mo.group()
-            if kind == 'NAME':
+            if kind == 'NAME' and not self._in_word:
                 self._cur_word += value
                 self._in_word = True
                 continue
-            elif kind == 'SKIP' and self._in_word:
+            elif kind in ('SKIP', 'NUMBER', 'NAME') and self._in_word:
                 self._cur_word += value
-            elif kind != 'NAME' and self._in_word:
+                continue
+            elif self._in_word:
                 yield Token('NAME', self._cur_word.strip())
                 self._cur_word = ''
                 self._in_word = False
