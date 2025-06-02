@@ -59,7 +59,7 @@ check_python_version
 echo OK
 
 printf "Установка зависимостей... "
-#install_dependencies
+install_dependencies
 echo OK
 
 printf "Копирование исходного кода... "
@@ -73,6 +73,6 @@ echo OK
 
 printf "Копирование файла .desktop... "
 copy_desktop
-echo "ОК"
+echo OK
 
 echo "Установка успешно завершена"
