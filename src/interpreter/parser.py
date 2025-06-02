@@ -1,38 +1,11 @@
 from enum import auto, Enum
-from dataclasses import dataclass
-import re
 from typing import Iterable
 
 from .ast_classes import (AlgStart, AlgEnd, Call, Input, IfStart,
                           IfEnd, Statement, StoreVar, Op, Output, ElseStart)
-from .constants import KEYWORDS, TYPES
 from .value import Value
+from .tokenizer import Tokenizer
 from .exceptions import SyntaxException
-
-token_specification = [
-            ('COMMENT',       r'\|.*'),
-            ('STRING',        r'"[^"\n]*"'),
-            ('CHAR',          r"'.'"),
-            ('NUMBER',        r'\d+(\.\d*)?'),
-            # В Python 3.10 и 3.11 символов `\` в f-строках быть не может
-            ('TYPE',          r'(\b' + r'\b|\b'.join(TYPES) + r'\b)'),
-            ('KEYWORD',       r'(\b' + r'\b|\b'.join(KEYWORDS) + r'\b)'),
-            ('OP',            r'(\*\*|\+|\-|\*|/|>=|<=|<>|>|<|\(|\)|\bили\b|\bи\b)'),
-            ('NAME',          r'[A-Za-zА-Яа-я_]([ A-Za-zА-Яа-я_0-9]*[A-Za-zА-Яа-я_0-9])?'),
-            ('ASSIGN',        r':='),
-            ('EQ',            r'='),
-            ('COMMA',         r','),
-            ('NEWLINE',       r'\n'),
-            ('SKIP',          r'[ \t]+'),
-            ('OTHER',         r'.'),
-]
-TOK_REGEX = '|'.join(f'(?P<{name}>{regex})' for name, regex in token_specification)
-
-
-@dataclass
-class Token:
-    kind: str
-    value: str
 
 
 class Env(Enum):
@@ -55,11 +28,11 @@ class Parser:
 
         self._was_alg = False
 
-        self.tokens = re.finditer(TOK_REGEX, code+'\n')
+        tokenizer = Tokenizer(code+'\n')
+        self.tokens = tokenizer.tokenize()
 
     def _next_token(self) -> None:
-        mo = next(self.tokens)
-        self.cur_token = Token(mo.lastgroup, mo.group())
+        self.cur_token = next(self.tokens)
         if self.cur_token.kind in ('SKIP', 'COMMENT'):
             self._next_token()
             return
