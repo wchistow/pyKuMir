@@ -1,4 +1,6 @@
 import os
+import re
+from pathlib import Path
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QTextDocument
@@ -13,17 +15,18 @@ class DocView(QWidget):
 
         self.view = QTextDocument()
 
-        with open('../docs/lang/README.md') as f:
+        self.base_dir = Path(__file__).parent.parent.parent
+        with open(os.path.join(self.base_dir, 'docs', 'lang', 'README.md')) as f:
             text = f.read()
 
         self.view.setMarkdown(text)
 
         self.tree = QTreeWidget(self)
-        for f in _get_all_files('../docs'):
+        for f in _get_all_files(os.path.join(self.base_dir, 'docs')):
             item = QTreeWidgetItem(self.tree)
             item.setText(0, f)
             self.tree.addTopLevelItem(item)
-            if item.text(0) == '../docs/lang/README.md':
+            if item.text(0) == os.path.join('lang', 'README.md'):
                 self.tree.setCurrentItem(item)
         self.tree.selectionModel().selectionChanged.connect(self.on_selection_changed)
 
@@ -44,7 +47,7 @@ class DocView(QWidget):
         self.setLayout(self.grid)
 
     def on_selection_changed(self):
-        with open(self.tree.selectedIndexes()[0].data()) as f:
+        with open(os.path.join(self.base_dir, 'docs', self.tree.selectedIndexes()[0].data())) as f:
             text = f.read()
 
         self.view.setMarkdown(text)
@@ -52,9 +55,10 @@ class DocView(QWidget):
 
 def _get_all_files(root: str) -> list[str]:
     result = []
+    regex = os.path.join('.*', 'docs', '(.*)')
     for item in os.listdir(root):
         if not os.path.isdir(os.path.join(root, item)):
-            result.append(os.path.join(root, item))
+            result.append(re.match(regex, os.path.join(root, item)).groups()[0])
         else:
             result += _get_all_files(os.path.join(root, item))
 
