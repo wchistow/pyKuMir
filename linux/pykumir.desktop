@@ -1,0 +1,9 @@
+#!/usr/bin/env xdg-open
+# TODO: gtk-launch: отсутствует приложение /usr/share/applications/pykumir.desktop
+[Desktop Entry]
+Name=pyKuMir
+Type=Application
+Exec=/usr/bin/pykumir
+Terminal=false
+Categories=Education;
+Keywords=кумир;pykumir;

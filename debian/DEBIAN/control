@@ -1,7 +1,0 @@
-Package: pykumir
-Version: 1.0.0a
-Priority: optional
-Architecture: all
-Depends: python3 (>= 3.10), qt6-base-dev, python3-pyqt6, python3-pygments (>= 2.2)
-Maintainer: Vladimir Chistov <wchistow@yandex.ru>
-Description: Клон КуМир, написанный на Python
