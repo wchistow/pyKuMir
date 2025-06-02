@@ -34,6 +34,7 @@ pykumir файл.kum
 ```sh
 git clone https://gitflic.ru/project/wchistow/pykumir.git
 cd pykumir
+chmod +x ./linux/install.sh
 ./linux/install.sh
 ```
 

@@ -11,13 +11,13 @@ install_dependencies() {
   distro=$(lsb_release -i | cut -f 2-) || exit 1
   case "$distro" in
     "Linuxmint" | "Ubuntu" | "Debian" )
-      apt install qt6-base-dev python3-pyqt6 python3-pygments || exit 1
+      sudo apt install qt6-base-dev python3-pyqt6 python3-pygments || exit 1
       ;;
     "Fedora" )
-      dnf install qt6-qtbase-devel python3-pyqt6 python3-pygments || exit 1
+      sudo dnf install qt6-qtbase-devel python3-pyqt6 python3-pygments || exit 1
       ;;
     "Arch" | "CachyOS" )
-      pacman -S qt6-base python3-pyqt6 python3-pygments || exit 1
+      sudo pacman -S qt6-base python3-pyqt6 python3-pygments || exit 1
       ;;
     * )
       echo "Извините, ваш дистрибутив ($distro) пока не поддерживается"
