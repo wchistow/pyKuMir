@@ -36,7 +36,6 @@ from .docview import DocView
 
 from interpreter import code2bc, SyntaxException, RuntimeException, VM
 
-
 ABOUT = f'''
 Версия Python: {platform.python_version()}
 Реализация: {platform.python_implementation()}
@@ -97,7 +96,7 @@ class Interface(QWidget):
 
     def show_about(self):
         QMessageBox.information(self, 'О программе', self.ABOUT,
-                                QMessageBox.StandardButton.Close)
+                                QMessageBox.StandardButton.Ok)
 
     def _input_from_console(self) -> str:
         # self.console.input_line = self.console.toPlainText().count('\n')
@@ -140,4 +139,6 @@ def run(program_version: str):
 
     logging.info('Приложение запущено')
 
-    exit(app.exec())
+    code = app.exec()
+    logging.info('Приложение остановлено')
+    exit(code)

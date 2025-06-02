@@ -4,7 +4,7 @@ from interpreter import build_bytecode, Parser, VM, pretty_print_bc
 from metadata import VERSION
 
 HELP = '''Использование:
-python cli.py [ОПЦИИ] файл.kum
+pykumir [ОПЦИИ] файл.kum
 
 Опции:
   --debug       - запустить программу в режиме отладки
@@ -17,7 +17,7 @@ def main(argv):
     debug = False
 
     argv = argv[1:]
-    if not argv or '--help' in argv or '-h' in argv:
+    if '--help' in argv or '-h' in argv:
         print(HELP)
         return
     elif '--version' in argv or '-V' in argv:
@@ -41,7 +41,7 @@ def run_program(code: str, debug: bool):
         print('-'*40)
     bc = build_bytecode(parsed)
     if debug:
-        pretty_print_bc(bc[0], bc[1])
+        pretty_print_bc(*bc)
         print('-' * 40)
     vm = VM(bc[0], output_f=lambda s: print(s, end=''), input_f=input, algs=bc[1])
     vm.execute()

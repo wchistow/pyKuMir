@@ -51,4 +51,6 @@ class Tokenizer:
                 yield Token('NAME', self._cur_word.strip())
                 self._cur_word = ''
                 self._in_word = False
-            yield Token(kind, value)
+
+            if kind not in ('SKIP', 'COMMENT'):
+                yield Token(kind, value)

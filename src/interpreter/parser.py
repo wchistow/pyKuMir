@@ -33,9 +33,6 @@ class Parser:
 
     def _next_token(self) -> None:
         self.cur_token = next(self.tokens)
-        if self.cur_token.kind in ('SKIP', 'COMMENT'):
-            self._next_token()
-            return
         if self.cur_token.kind == 'NEWLINE':
             self.line += 1
 
