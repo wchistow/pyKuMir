@@ -1,39 +1,37 @@
 #!/bin/bash
 check_python_version() {
   py_v=$(python -c "import sys; print('OK' if sys.version_info >= (3, 10) else '')") || exit 1
-  if [[ "$py_v" != "OK" ]] then
+  if [[ "$py_v" != "OK" ]]; then
     echo "Версия Python должна быть >= 3.10"
     exit 1
   fi
 }
 
 install_dependencies() {
-  distro=$(lsb_release -i | cut -f 2-) || exit 1
-  case "$distro" in
-    "Linuxmint" | "Ubuntu" | "Debian" )
-      sudo apt install qt6-base-dev python3-pyqt6 python3-pygments || exit 1
-      ;;
-    "Fedora" )
-      sudo dnf install qt6-qtbase-devel python3-pyqt6 python3-pygments || exit 1
-      ;;
-    "Arch" | "CachyOS" )
-      sudo pacman -S qt6-base python3-pyqt6 python3-pygments || exit 1
-      ;;
-    * )
-      echo "Извините, ваш дистрибутив ($distro) пока не поддерживается"
-      exit 1
-      ;;
-  esac
+  have_prog() {
+      [ -x "$(which $1)" ]
+  }
+
+  if have_prog apt; then
+    sudo apt install qt6-base-dev python3-pyqt6 python3-pygments || exit 1
+  elif have_prog dnf; then
+    sudo dnf install qt6-qtbase-devel python3-pyqt6 python3-pygments || exit 1
+  elif have_prog pacman; then
+    sudo pacman -S qt6-base python-pyqt6 python-pygments || exit 1
+  else
+    echo "Извините, ваш дистрибутив пока не поддерживается"
+    exit 1
+  fi
 }
 
 clear_old() {
-  if [[ -e /usr/lib/pykumir ]] then
+  if [[ -e /usr/lib/pykumir ]]; then
     sudo rm -r /usr/lib/pykumir
   fi
-  if [[ -e /usr/bin/pykumir ]] then
+  if [[ -e /usr/bin/pykumir ]]; then
     sudo rm /usr/bin/pykumir
   fi
-  if [[ -e /usr/share/applications/pykumir.desktop ]] then
+  if [[ -e /usr/share/applications/pykumir.desktop ]]; then
     sudo rm /usr/share/applications/pykumir.desktop
   fi
 }
