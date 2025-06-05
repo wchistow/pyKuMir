@@ -1,4 +1,4 @@
-from PyQt6.QtGui import QFontMetricsF, QFont
+from PyQt6.QtGui import QFontMetricsF
 from PyQt6.QtWidgets import QTextEdit
 
 from .lexer import highlight_text
@@ -7,10 +7,10 @@ from .lexer import highlight_text
 class CodeInput(QTextEdit):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        self.setPlainText('вывод "привет"')
+        self.setPlainText('алг\nнач\n  \nкон')
         self.highlight_syntax()
         cursor = self.textCursor()
-        cursor.setPosition(14)
+        cursor.setPosition(10)
         self.setTextCursor(cursor)
 
         font = self.font()

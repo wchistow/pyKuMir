@@ -4,7 +4,8 @@ from pathlib import Path
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QTextDocument
-from PyQt6.QtWidgets import QWidget, QTextEdit, QSplitter, QGridLayout, QTreeWidget, QTreeWidgetItem
+from PyQt6.QtWidgets import (QWidget, QTextEdit, QSplitter, QGridLayout,
+                             QTreeWidget, QTreeWidgetItem)
 
 
 class DocView(QWidget):
