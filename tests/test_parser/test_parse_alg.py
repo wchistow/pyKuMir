@@ -79,13 +79,13 @@ def test_parse_call():
 
 
 def test_parse_alg_with_space_in_name():
-    code = '''алг раз два
+    code = '''алг один два
     нач
     кон
     '''
     parser = Parser(code)
     parsed = parser.parse()
-    assert parsed == [ast_classes.AlgStart(0, is_main=True, name='раз два'), ast_classes.AlgEnd(2)]
+    assert parsed == [ast_classes.AlgStart(0, is_main=True, name='один два'), ast_classes.AlgEnd(2)]
 
 def test_parse_call_alg_with_space_in_name():
     code = '''

@@ -12,6 +12,19 @@ uv sync
 pytest tests/
 ```
 
+## Структура исходного кода:
+
+```
+src/
+    interface/
+        *код интерфейса*
+    interpreter/
+        *код интерпертатора*
+    cli.py
+    main.py
+    metadata.py
+```
+
 ## Структура тестов:
 
 ```
@@ -24,8 +37,9 @@ tests/
         *тесты виртуальной машины*
 ```
 
-## Сборка .deb пакета:
+## Установка:
 
 ```sh
-dpkg-deb -b ./debian/ pykumir.deb
+chmod +x ./linux/install.sh
+./linux/install.sh
 ```

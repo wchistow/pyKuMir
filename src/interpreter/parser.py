@@ -1,8 +1,8 @@
 from enum import auto, Enum
 from typing import Iterable
 
-from .ast_classes import (AlgStart, AlgEnd, Call, Input, IfStart,
-                          IfEnd, Statement, StoreVar, Op, Output, ElseStart)
+from .ast_classes import (AlgStart, AlgEnd, Call, Input, IfStart, IfEnd, Statement,
+                          StoreVar, Op, Output, ElseStart, LoopWithCountStart, LoopWithCountEnd)
 from .value import Value
 from .tokenizer import Tokenizer
 from .exceptions import SyntaxException
@@ -14,6 +14,7 @@ class Env(Enum):
     MAIN = auto()
     ALG = auto()
     IF = auto()
+    LOOP_WITH_COUNT = auto()
 
 
 class Parser:
@@ -124,6 +125,11 @@ class Parser:
         elif self.cur_token.value == 'все' and self.envs[-1] == Env.IF:
             self.envs.pop()
             self.res.append(IfEnd(self.line))
+        elif self.cur_token.value == 'нц' and Env.INTRODUCTION not in self.envs:
+            self._handle_loop()
+        elif self.cur_token.value == 'кц' and self.envs[-1] == Env.LOOP_WITH_COUNT:
+            self.envs.pop()
+            self.res.append(LoopWithCountEnd(self.line))
         elif self.cur_token.kind == 'NAME':
             name = self.cur_token.value
             self._next_token()
@@ -221,19 +227,46 @@ class Parser:
         self.res.append(IfStart(self.line, expr))
         self._next_token()
 
+    def _handle_loop(self):
+        self._next_token()
+        try:
+            count = self._parse_expr()
+        except SyntaxException:
+            # другие циклы или ошибки
+            raise SyntaxException(self.line, self.cur_token.value) from None
+        else:
+            self._handle_loop_with_count(count)
+
+    def _handle_loop_with_count(self, count):
+        if self.cur_token.value != 'раз':
+            raise SyntaxException(self.line, self.cur_token.value)
+
+        self.envs.append(Env.LOOP_WITH_COUNT)
+        self.res.append(LoopWithCountStart(self.line, count))
+
     def _parse_expr(self) -> list[Value | Op]:
         expr = []
 
-        last_kind = ''
+        # Переменные должны быть инициализированы разными значениями,
+        # чтобы на первой итерации цикла не происходила ошибка
+        last_kind = None
+        cur_kind = ''
         while (self.cur_token.kind in ('STRING', 'NAME', 'CHAR', 'NUMBER', 'OP', 'EQ') or
                self.cur_token.value in ('да', 'нет', 'нс')):
-            expr.append(_get_val(self.cur_token.kind, self.cur_token.value))
-            self._next_token()
-            if self.cur_token.kind == last_kind and self.cur_token.value not in ('(', ')'):
+            if self.cur_token.kind in ('STRING', 'NAME', 'CHAR', 'NUMBER'):
+                cur_kind = 'val'
+            elif self.cur_token.value not in ('(', ')'):
+                cur_kind = 'op'
+            else:
+                cur_kind = ''
+
+            if last_kind == cur_kind:
                 raise SyntaxException(self.line, self.cur_token.value)
 
-            if self.cur_token.value not in ('(', ')'):
-                last_kind = self.cur_token.kind
+            expr.append(_get_val(self.cur_token.kind, self.cur_token.value))
+            self._next_token()
+
+            last_kind = cur_kind
 
         if not expr:
             raise SyntaxException(self.line, self.cur_token.value)

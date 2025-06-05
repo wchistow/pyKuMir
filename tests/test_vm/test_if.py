@@ -83,3 +83,17 @@ def test_if_with_inner_if():
     vm.execute()
 
     assert print_mock.printed_text == '2'
+
+# --- тесты ошибок ---
+
+def test_if_cond_not_bool_error():
+    bc = code2bc('''
+    алг нач
+        если 1 то
+            вывод 1
+        все
+    кон''')
+    vm = create_vm(*bc)
+
+    with pytest.raises(RuntimeException):
+        vm.execute()

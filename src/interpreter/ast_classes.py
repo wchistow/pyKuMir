@@ -56,3 +56,12 @@ class IfEnd(Statement):
 @dataclass
 class ElseStart(Statement):
     lineno: int
+
+@dataclass
+class LoopWithCountStart(Statement):
+    lineno: int
+    count: Expr
+
+@dataclass
+class LoopWithCountEnd(Statement):
+    lineno: int
