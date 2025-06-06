@@ -2,19 +2,21 @@ from datetime import datetime
 
 from interpreter import code2bc, SyntaxException, RuntimeException, VM
 
+from .console import Console
+
 
 class Runner:
-    def __init__(self, main_window):
-        self.main_window = main_window
+    def __init__(self, console: Console):
+        self.console = console
 
     def _output(self, s: str):
-        self.main_window.console.output(s)
+        self.console.output(s)
 
     def _input(self) -> str:
-        ...
+        return self.console.input()
 
     def run(self, code: str):
-        self.main_window.console.output_sys(
+        self.console.output_sys(
             f'>> {datetime.now().strftime("%H:%M:%S")} - Новая программа - Начало выполнения\n'
         )
         try:
@@ -30,6 +32,6 @@ class Runner:
                 vm.execute()
             except RuntimeException as e:
                 print(e.args)
-        self.main_window.console.output_sys(
+        self.console.output_sys(
             f'\n>> {datetime.now().strftime("%H:%M:%S")} - Новая программа - Выполнение завершено\n'
         )

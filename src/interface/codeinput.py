@@ -15,7 +15,7 @@ class CodeInput(QTextEdit):
 
         font = self.font()
         font_metrics = QFontMetricsF(font)
-        self.setTabStopDistance(4 * font_metrics.averageCharWidth())
+        self.setTabStopDistance(2 * font_metrics.averageCharWidth())
 
     def keyPressEvent(self, event) -> None:
         super().keyPressEvent(event)

@@ -1,3 +1,6 @@
+from threading import Thread
+
+from PyQt6.QtCore import QEvent, Qt
 from PyQt6.QtGui import QTextCursor
 from PyQt6.QtWidgets import QTextEdit
 
@@ -10,11 +13,24 @@ CSS = '''<style>
 
 
 class Console(QTextEdit):
-    # TODO: ввод
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.insertHtml(CSS)
         self.setReadOnly(True)
+
+        self.input_completed = False
+        self.input_text = ''
+        self.inputting = False
+
+    def keyPressEvent(self, e):
+        super().keyPressEvent(e)
+        if self.inputting:
+            if e.type() == QEvent.Type.KeyPress:
+                if e.key() == Qt.Key.Key_Return:
+                    self.inputting = False
+                    self.input_completed = True
+                else:
+                    self.input_text += e.text()
 
     def _cursor_to_end(self) -> None:
         cursor = self.textCursor()
@@ -28,3 +44,22 @@ class Console(QTextEdit):
     def output(self, text: str) -> None:
         self._cursor_to_end()
         self.insertHtml(text)
+
+    def _wait_for_input(self):
+        while True:
+            if self.input_completed:
+                break
+
+    def input(self) -> str:
+        self.inputting = True
+        self.setReadOnly(False)
+        wait_for_input_t = Thread(target=self._wait_for_input)
+        wait_for_input_t.start()
+        wait_for_input_t.join()
+
+        self.input_completed = False
+        self.inputting = False
+        self.setReadOnly(True)
+        input_text = self.input_text
+        self.input_text = ''
+        return input_text

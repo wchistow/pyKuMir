@@ -1,3 +1,4 @@
+from threading import Thread
 from locale import getencoding
 from platform import python_version, python_implementation, platform
 
@@ -26,14 +27,10 @@ class MainWindow(QWidget):
         super().__init__(parent)
         self.ABOUT = f'pyKuMir v{program_version}\n{ABOUT}'
 
-        self.inputted_text = ''
-
         self.setWindowTitle(f'pyKuMir v{program_version}')
         self.resize(800, 600)
 
         self.docview = DocView()
-
-        self.runner = Runner(self)
 
         self.menu_bar = QMenuBar(self)
 
@@ -59,6 +56,9 @@ class MainWindow(QWidget):
         self.code_and_console.addWidget(self.codeinput)
         self.code_and_console.addWidget(self.console)
 
+        self.runner = Runner(self.console)
+        self.runner_thread: Thread | None = None
+
         self.grid = QGridLayout(self)
         self.grid.addWidget(self.menu_bar, 0, 0, 0, 0)
         self.grid.addLayout(self.buttons, 1, 0, 1, 1)
@@ -68,10 +68,19 @@ class MainWindow(QWidget):
 
         self.setLayout(self.grid)
 
+    def closeEvent(self, a0):
+        if self.runner_thread is not None:
+            self.runner_thread.join()
+        super().closeEvent(a0)
+
     def show_about(self):
         QMessageBox.information(self, 'О программе', self.ABOUT,
                                 QMessageBox.StandardButton.Ok)
 
     def run_code(self):
+        if self.runner_thread is not None:
+            self.runner_thread.join()
+
         code = self.codeinput.toPlainText()
-        self.runner.run(code)
+        self.runner_thread = Thread(target=self.runner.run, args=(code,))
+        self.runner_thread.start()
