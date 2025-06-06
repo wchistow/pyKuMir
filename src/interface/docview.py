@@ -1,5 +1,5 @@
 import os
-import re
+from re import match
 from pathlib import Path
 
 from PyQt6.QtCore import Qt
@@ -59,7 +59,7 @@ def _get_all_files(root: str) -> list[str]:
     regex = os.path.join('.*', 'docs', '(.*)')
     for item in os.listdir(root):
         if not os.path.isdir(os.path.join(root, item)):
-            result.append(re.match(regex, os.path.join(root, item)).groups()[0])
+            result.append(match(regex, os.path.join(root, item)).groups()[0])
         else:
             result += _get_all_files(os.path.join(root, item))
 
