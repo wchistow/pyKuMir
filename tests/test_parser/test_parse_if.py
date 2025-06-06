@@ -31,7 +31,6 @@ def test_parse_simple_if():
         ast_classes.AlgEnd(5)
     ]
 
-
 def test_parse_if_with_else():
     code = '''
     алг нач
@@ -53,7 +52,6 @@ def test_parse_if_with_else():
         ast_classes.IfEnd(6),
         ast_classes.AlgEnd(7)
     ]
-
 
 def test_parse_if_with_inner_if():
     code = '''
@@ -80,3 +78,14 @@ def test_parse_if_with_inner_if():
         ast_classes.IfEnd(8),
         ast_classes.AlgEnd(9)
     ]
+
+def test_parse_if_without_end_error():
+    code = '''
+    алг нач
+        если да то
+            вывод 1
+    кон'''
+    parser = Parser(code)
+
+    with pytest.raises(SyntaxException):
+        parser.parse()

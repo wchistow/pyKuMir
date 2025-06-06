@@ -61,31 +61,25 @@ def test_var_with_space_in_name():
     parsed = parser.parse()
     assert parsed == [ast_classes.StoreVar(0, 'цел', ['а б'], [Value('цел', 5)])]
 
-# --- тесты ошибок ---
-
 def test_keyword_in_name_error():
     parser = Parser('цел нач := 0')
     with pytest.raises(SyntaxException):
         parser.parse()
-
 
 def test_two_vars_with_value_error():
     parser = Parser('цел а, б := 2')
     with pytest.raises(SyntaxException):
         parser.parse()
 
-
 def test_const_expr_error():
     parser = Parser('цел а = 2 + 2')
     with pytest.raises(SyntaxException):
         parser.parse()
 
-
 def test_two_ops_in_expr_error():
     parser = Parser('цел а = 2 + * 2')
     with pytest.raises(SyntaxException):
         parser.parse()
-
 
 def test_two_vals_in_expr_error():
     parser = Parser('цел а = 2 + f 2')

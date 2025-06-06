@@ -25,7 +25,6 @@ def test_parse_simple_alg():
     assert parsed1 == [ast_classes.AlgStart(0, is_main=True, name=''), ast_classes.AlgEnd(2)]
     assert parsed2 == [ast_classes.AlgStart(0, is_main=True, name=''), ast_classes.AlgEnd(0)]
 
-
 def test_parse_alg_with_name():
     code = '''алг тест
     нач
@@ -34,7 +33,6 @@ def test_parse_alg_with_name():
     parser = Parser(code)
     parsed = parser.parse()
     assert parsed == [ast_classes.AlgStart(0, is_main=True, name='тест'), ast_classes.AlgEnd(2)]
-
 
 def test_parse_two_algs():
     code = '''алг тест1
@@ -53,7 +51,6 @@ def test_parse_two_algs():
         ast_classes.AlgStart(4, is_main=False, name='тест2'),
         ast_classes.AlgEnd(6)
     ]
-
 
 def test_parse_call():
     code = '''алг
@@ -76,7 +73,6 @@ def test_parse_call():
         ast_classes.Output(7, exprs=[[Value('лит', 'привет')]]),
         ast_classes.AlgEnd(8)
     ]
-
 
 def test_parse_alg_with_space_in_name():
     code = '''алг один два
@@ -107,8 +103,6 @@ def test_parse_call_alg_with_space_in_name():
         ast_classes.AlgEnd(7),
     ]
 
-# тесты ошибок
-
 def test_without_start_keyword_error():
     code = '''алг
     цел а := 5
@@ -117,7 +111,6 @@ def test_without_start_keyword_error():
     with pytest.raises(SyntaxException):
         parser.parse()
 
-
 def test_without_end_keyword_error():
     code = '''алг
     нач
@@ -125,7 +118,6 @@ def test_without_end_keyword_error():
     parser = Parser(code)
     with pytest.raises(SyntaxException):
         parser.parse()
-
 
 def test_not_first_without_name():
     code = '''алг тест

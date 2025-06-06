@@ -33,14 +33,12 @@ def test_simple_input():
     vm.execute()
     assert print_mock.printed_text == '5'
 
-
 def test_input_string():
     input_mock.entered_text = 'привет, мир!'
     bytecode = code2bc('лит а\nввод а\nвывод а')
     vm = create_vm(*bytecode)
     vm.execute()
     assert print_mock.printed_text == 'привет, мир!'
-
 
 def test_input_bool():
     input_mock.entered_text = 'да'
@@ -49,15 +47,12 @@ def test_input_bool():
     vm.execute()
     assert print_mock.printed_text == 'да'
 
-
 def test_input_char():
     input_mock.entered_text = 'а'
     bytecode = code2bc('сим а\nввод а\nвывод а')
     vm = create_vm(*bytecode)
     vm.execute()
     assert print_mock.printed_text == 'а'
-
-# тесты ошибок
 
 def test_undef_target_input_error():
     input_mock.entered_text = '5'
@@ -66,7 +61,6 @@ def test_undef_target_input_error():
     with pytest.raises(RuntimeException):
         vm.execute()
 
-
 def test_input_string_to_int_error():
     input_mock.entered_text = 'тест'
     bytecode = code2bc('цел а\nввод а\nвывод а')
@@ -74,14 +68,12 @@ def test_input_string_to_int_error():
     with pytest.raises(RuntimeException):
         vm.execute()
 
-
 def test_input_string_to_float_error():
     input_mock.entered_text = 'тест'
     bytecode = code2bc('вещ а\nввод а\nвывод а')
     vm = create_vm(*bytecode)
     with pytest.raises(RuntimeException):
         vm.execute()
-
 
 def test_input_string_to_char_error():
     input_mock.entered_text = 'тест'

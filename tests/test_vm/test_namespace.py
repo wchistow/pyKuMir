@@ -34,7 +34,6 @@ def test_get_glob_var_from_alg():
     vm.execute()
     assert print_mock.printed_text == '5'
 
-
 def test_get_local_var_from_another_alg_error():
     bytecode = code2bc('''
     алг
@@ -56,7 +55,6 @@ def test_get_local_var_from_another_alg_error():
 
     with pytest.raises(RuntimeException):
         vm.execute()
-
 
 def test_get_local_var_from_local_call_error():
     bytecode = code2bc('''алг

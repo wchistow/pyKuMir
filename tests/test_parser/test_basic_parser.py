@@ -17,12 +17,10 @@ def test_invalid_char_syntax_error():
     with pytest.raises(SyntaxException):
         parser.parse()
 
-
 def test_invalid_char_instead_of_assign():
     parser = Parser('цел а?')
     with pytest.raises(SyntaxException):
         parser.parse()
-
 
 def test_invalid_char_in_expr_error():
     parser = Parser('цел а := 1 & 2')

@@ -2,6 +2,8 @@ import importlib
 from pathlib import Path
 import sys
 
+import pytest
+
 from mocks import PrintMock
 
 PATH_TO_SRC = Path(__file__).parent.parent.parent.absolute() / 'src'
@@ -34,7 +36,6 @@ def test_simple_loop_with_count():
 
     assert print_mock.printed_text == 'тест\n' * 5
 
-
 def test_loop_with_count_with_expr():
     bc = code2bc('''алг нач
         нц 5+2 раз
@@ -46,3 +47,15 @@ def test_loop_with_count_with_expr():
     vm.execute()
 
     assert print_mock.printed_text == 'тест\n' * (5 + 2)
+
+def test_loop_with_count_expr_not_int_error():
+    bc = code2bc('''алг нач
+            нц "5" раз
+                вывод "тест", нс
+            кц
+        кон
+        ''')
+    vm = create_vm(*bc)
+
+    with pytest.raises(RuntimeException):
+        vm.execute()

@@ -36,7 +36,6 @@ def test_simple_if():
 
     assert print_mock.printed_text == '1'
 
-
 def test_if_with_else():
     bc = code2bc('''
     алг нач
@@ -50,7 +49,6 @@ def test_if_with_else():
     vm.execute()
 
     assert print_mock.printed_text == '2'
-
 
 def test_if_with_else_and_code_after():
     bc = code2bc('''
@@ -67,7 +65,6 @@ def test_if_with_else_and_code_after():
 
     assert print_mock.printed_text == '20'
 
-
 def test_if_with_inner_if():
     bc = code2bc('''
     алг нач
@@ -83,8 +80,6 @@ def test_if_with_inner_if():
     vm.execute()
 
     assert print_mock.printed_text == '2'
-
-# --- тесты ошибок ---
 
 def test_if_cond_not_bool_error():
     bc = code2bc('''
