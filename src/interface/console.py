@@ -39,7 +39,8 @@ class Console(QTextEdit):
 
     def output_sys(self, text: str) -> None:
         self._cursor_to_end()
-        self.insertHtml(f'<span class="sys">{text.replace("\n", "<br />")}</span>')
+        html_text = text.replace("\n", "<br />")
+        self.insertHtml(f'<span class="sys">{html_text}</span>')
     
     def output(self, text: str) -> None:
         self._cursor_to_end()

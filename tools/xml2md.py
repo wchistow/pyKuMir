@@ -60,7 +60,7 @@ def handle_elem(elem, indent: int, in_list=None, list_indent=-1):
             case 'funcdef':
                 res +=  f'`{ch.text.strip()} {ch[0].text.strip()}`\n\nАргументы:\n\n'
             case 'paramdef':
-                res +=  f' + `{(ch.text or '').strip()} {ch[0].text.strip()}`\n\n'
+                res +=  f' + `{(ch.text or "").strip()} {ch[0].text.strip()}`\n\n'
             case 'orderedlist' | 'itemizedlist':
                 res += handle_elem(ch, indent+1, 'order' if ch.tag == 'orderedlist' else 'item1', list_indent+1)
             case 'keywordset':

@@ -43,7 +43,7 @@ class KuMirLexer(RegexLexer):
 
 
 def highlight_text(text: str) -> str:
-    return f'{CSS}<pre>{highlight(text, KuMirLexer(), HtmlFormatter(lineseparator='<br />'))[:-1]}</pre>'
+    return f'{CSS}<pre>{highlight(text, KuMirLexer(), HtmlFormatter(lineseparator="<br />"))[:-1]}</pre>'
 
 
 if __name__ == '__main__':
