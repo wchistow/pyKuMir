@@ -2,8 +2,9 @@ from threading import Thread
 from locale import getencoding
 from platform import python_version, python_implementation, platform
 
+from PyQt6.QtGui import QKeySequence
 from PyQt6.QtWidgets import (QWidget, QMenuBar, QMenu, QSplitter, QGridLayout,
-                             QMessageBox, QToolBar, QToolButton)
+                             QMessageBox, QToolBar, QToolButton, QFileDialog)
 from PyQt6.QtCore import Qt, QT_VERSION_STR, PYQT_VERSION_STR
 
 from .codeinput import CodeInput
@@ -27,7 +28,10 @@ class MainWindow(QWidget):
         super().__init__(parent)
         self.ABOUT = f'pyKuMir v{program_version}\n{ABOUT}'
 
-        self.setWindowTitle(f'pyKuMir v{program_version}')
+        self.cur_file: str | None = None
+        self.unsaved_changes = False
+
+        self.update_title()
         self.resize(800, 600)
 
         self.docview = DocView()
@@ -35,6 +39,13 @@ class MainWindow(QWidget):
         self.menu_bar = QMenuBar(self)
 
         self.file_menu = QMenu('Программа')
+        self.file_menu.addAction('Новая программа', QKeySequence('Ctrl+N'), self.new_program)
+        self.file_menu.addSeparator()
+        self.file_menu.addAction('Загрузить', QKeySequence('Ctrl+O'), self.open_file)
+        self.file_menu.addSeparator()
+        self.file_menu.addAction('Сохранить', QKeySequence('Ctrl+S'), self.save_file)
+        self.file_menu.addAction('Сохранить как', self.save_file_as)
+        self.file_menu.addSeparator()
         self.file_menu.addAction('Выход', self.close)
         self.menu_bar.addMenu(self.file_menu)
 
@@ -48,6 +59,9 @@ class MainWindow(QWidget):
         self.add_tool_buttons()
 
         self.codeinput = CodeInput(self)
+        self.codeinput.textChanged.connect(self.new_unsaved_changes)
+        self.codeinput.textChanged.connect(self.update_title)
+
         self.console = Console(self)
 
         self.code_and_console = QSplitter(Qt.Orientation.Vertical, self)
@@ -73,9 +87,79 @@ class MainWindow(QWidget):
         self.buttons.addWidget(run_button)
 
     def closeEvent(self, a0):
+        if self.unsaved_changes:
+            self.ask_to_save_or_close('Закрытие текста')
         if self.runner_thread is not None:
             self.runner_thread.join()
         super().closeEvent(a0)
+
+    def new_unsaved_changes(self):
+        self.unsaved_changes = True
+
+    def update_title(self):
+        self.setWindowTitle(f'{self.cur_file if self.cur_file is not None else "Новая программа"}'
+                            f'{"*" if self.unsaved_changes else ""} - pyKuMir')
+
+    def new_program(self):
+        if not self.unsaved_changes:
+            self.cur_file = None
+            self.codeinput.clear()
+            self.unsaved_changes = False
+            self.update_title()
+        else:
+            self.ask_to_save_or_close('Закрытие текста')
+
+    def ask_to_save_or_close(self, title: str):
+        ask_window = QMessageBox()
+        ask_window.setWindowTitle(title)
+        ask_window.setIcon(QMessageBox.Icon.Question)
+        ask_window.setText('В этом файле были проведены несохранённые изменения.\n'
+                           'При закрытии эти изменения будут потеряны.\nСохранить их?')
+
+        ask_window.addButton('Отменить закрытие', QMessageBox.ButtonRole.RejectRole)
+        no_save_button = ask_window.addButton('Не сохранять', QMessageBox.ButtonRole.NoRole)
+        save_button = ask_window.addButton('Сохранить', QMessageBox.ButtonRole.YesRole)
+        ask_window.setDefaultButton(save_button)
+
+        ask_window.exec()
+
+        if ask_window.clickedButton() == save_button:
+            self.save_file()
+            self.unsaved_changes = False
+            self.update_title()
+        elif ask_window.clickedButton() == no_save_button:
+            self.cur_file = None
+            self.codeinput.clear()
+            self.unsaved_changes = False
+
+        self.update_title()
+
+    def open_file(self):
+        if self.unsaved_changes:
+            self.ask_to_save_or_close('Открытие другого файла')
+
+        new_file = QFileDialog.getOpenFileName(self, 'Загрузить файл', '',
+                                               'Файлы КуМир (*.kum);;Все файлы (*)')
+        self.cur_file = new_file[0]
+        with open(self.cur_file) as f:
+            self.codeinput.setPlainText(f.read())
+            self.codeinput.highlight_syntax()
+            self.unsaved_changes = False
+
+    def save_file(self):
+        if self.cur_file is not None:
+            with open(self.cur_file, 'w') as f:
+                f.write(self.codeinput.toPlainText())
+        else:
+            self.save_file_as()
+
+    def save_file_as(self):
+        new_file = QFileDialog.getSaveFileName(self, 'Сохранить файл', '',
+                                               'Файлы КуМир (*.kum);;Все файлы (*)')
+        if new_file[0]:
+            self.cur_file = new_file[0]
+            with open(self.cur_file, 'w') as f:
+                f.write(self.codeinput.toPlainText())
 
     def show_about(self):
         QMessageBox.information(self, 'О программе', self.ABOUT,
