@@ -69,6 +69,20 @@ def test_if_with_inner_if():
     bc = code2bc('''
     алг нач
         если нет то
+            если да то
+                вывод 1
+            все
+        все
+    кон''')
+    vm = create_vm(*bc)
+    vm.execute()
+
+    assert print_mock.printed_text == ''
+
+def test_if_else_with_inner_if():
+    bc = code2bc('''
+    алг нач
+        если нет то
             вывод 1
         иначе
             если да то

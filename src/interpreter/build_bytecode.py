@@ -27,8 +27,6 @@ class BytecodeBuilder:
 
         cur_loop_name = None
 
-        if_indent = 0
-
         for stmt in parsed_code:
             if self.cur_alg is not None:
                 cur_ns = self.algs[self.cur_alg][0]
@@ -66,13 +64,10 @@ class BytecodeBuilder:
                 cur_ns.append((stmt.lineno, Bytecode.CALL, (stmt.alg_name,)))
                 self.cur_inst_n += 1
             elif isinstance(stmt, IfStart):
-                if if_indent:
-                    self.cur_tags.append(self.cur_inst_n)
                 cur_ns.extend(self._expr_bc(stmt.lineno, stmt.cond))
                 cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG_IF_FALSE, (self.cur_tag_n,)))
                 self.cur_inst_n += 1
                 self.cur_tag_n += 1
-                if_indent += 1
             elif isinstance(stmt, ElseStart):
                 cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG, (self.cur_tag_n,)))
                 self.cur_inst_n += 1
@@ -80,7 +75,6 @@ class BytecodeBuilder:
                 self.cur_tags.append(self.cur_inst_n)
             elif isinstance(stmt, IfEnd):
                 self.cur_tags.append(self.cur_inst_n)
-                if_indent -= 1
             elif isinstance(stmt, LoopWithCountStart):
                 cur_loop_name = str(self.cur_tag_n)
                 cur_ns.extend(self._expr_bc(stmt.lineno, stmt.count))
