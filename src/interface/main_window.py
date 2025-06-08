@@ -1,5 +1,5 @@
 from threading import Thread
-from locale import getencoding
+from sys import getdefaultencoding
 from platform import python_version, python_implementation, platform
 
 from PyQt6.QtGui import QKeySequence
@@ -16,7 +16,7 @@ ABOUT = f'''
 Версия Python: {python_version()}
 Реализация: {python_implementation()}
 Платформа: {platform()}
-Кодировка: {getencoding()}
+Кодировка: {getdefaultencoding()}
 
 Версия Qt: {QT_VERSION_STR}
 Версия PyQt: {PYQT_VERSION_STR}
