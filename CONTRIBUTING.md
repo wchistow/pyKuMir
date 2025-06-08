@@ -9,7 +9,7 @@ uv sync
 ## Запуск тестов:
 
 ```sh
-pytest tests/
+pytest --timeout=1 tests/
 ```
 
 ## Структура исходного кода:
