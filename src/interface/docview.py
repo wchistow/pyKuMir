@@ -1,44 +1,53 @@
 import os
-from re import match
+from re import match, sub
 from pathlib import Path
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QTextDocument
-from PyQt6.QtWidgets import (QWidget, QTextEdit, QSplitter, QGridLayout,
-                             QTreeWidget, QTreeWidgetItem)
+from PyQt6.QtWidgets import (QWidget, QSplitter, QGridLayout,
+                             QTreeWidget, QTreeWidgetItem, QTextBrowser)
 
 
 class DocView(QWidget):
+    PRETTY_NAMES = {
+        'lang/algs.md': 'Алгоритмы',
+        'lang/comments.md': 'Комментарии',
+        'lang/exprs.md': 'Вычисления',
+        'lang/if.md': 'Условный оператор',
+        'lang/io.md': 'Ввод/вывод',
+        'lang/loops.md': 'Циклы',
+        'lang/prog_struct.md': 'Структура программы',
+        'lang/README.md': 'Содержание',
+        'lang/vars.md': 'Переменные'
+    }
+
     def __init__(self, parent=None):
         super().__init__(parent)
 
         self.resize(600, 500)
 
-        self.view = QTextDocument()
+        self.view = QTextBrowser(self)
+        self.view.setLineWrapMode(QTextBrowser.LineWrapMode.WidgetWidth)
 
         self.base_dir = Path(__file__).parent.parent.parent
         with open(os.path.join(self.base_dir, 'docs', 'lang', 'README.md')) as f:
-            text = f.read()
+            self.view.setMarkdown(_links_from_relative_to_absolute(f.read(), self.base_dir))
 
-        self.view.setMarkdown(text)
+        self.view.anchorClicked.connect(self.update_selected_item)
 
         self.tree = QTreeWidget(self)
-        for f in _get_all_files(os.path.join(self.base_dir, 'docs')):
+        for f in _get_all_files(os.path.join(self.base_dir, 'docs', 'lang')):
             item = QTreeWidgetItem(self.tree)
-            item.setText(0, f)
+            item.setText(0, self.PRETTY_NAMES[f])
+            item.setData(1, 0, os.path.join(self.base_dir, 'docs', f))
             self.tree.addTopLevelItem(item)
-            if item.text(0) == os.path.join('lang', 'README.md'):
+            if item.data(1, 0) == os.path.join(self.base_dir, 'docs',
+                                                            'lang', 'README.md'):
                 self.tree.setCurrentItem(item)
         self.tree.selectionModel().selectionChanged.connect(self.on_selection_changed)
 
-        self.textview = QTextEdit(self)
-        self.textview.setReadOnly(True)
-        self.textview.resize(500, 600)
-        self.textview.setDocument(self.view)
-
         self.tree_and_doc = QSplitter(Qt.Orientation.Horizontal, self)
         self.tree_and_doc.addWidget(self.tree)
-        self.tree_and_doc.addWidget(self.textview)
+        self.tree_and_doc.addWidget(self.view)
 
         self.grid = QGridLayout(self)
         self.grid.addWidget(self.tree_and_doc, 0, 0, 0, 0)
@@ -48,10 +57,19 @@ class DocView(QWidget):
         self.setLayout(self.grid)
 
     def on_selection_changed(self):
-        with open(os.path.join(self.base_dir, 'docs', self.tree.selectedIndexes()[0].data())) as f:
-            text = f.read()
+        with open(
+                os.path.join(self.base_dir, 'docs',
+                             self.tree.selectedItems()[0].data(1, 0))
+        ) as f:
+            self.view.setMarkdown(_links_from_relative_to_absolute(f.read(), self.base_dir))
 
-        self.view.setMarkdown(text)
+    def update_selected_item(self, new_file):
+        new_file_path = new_file.path()
+        for i in range(self.tree.topLevelItemCount()):
+            item = self.tree.topLevelItem(i)
+            if item.data(1, 0) == new_file_path:
+                self.tree.setCurrentItem(item)
+                break
 
 
 def _get_all_files(root: str) -> list[str]:
@@ -64,3 +82,9 @@ def _get_all_files(root: str) -> list[str]:
             result += _get_all_files(os.path.join(root, item))
 
     return result
+
+
+def _links_from_relative_to_absolute(text: str, base_dir: Path) -> str:
+    return sub(r'\./(?P<filename>[a-z_]+\.md)',
+               rf'file://{os.path.join(base_dir, "docs", "lang")}'
+               rf'{os.path.sep}\g<filename>', text)
