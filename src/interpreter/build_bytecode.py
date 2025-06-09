@@ -19,7 +19,6 @@ class BytecodeBuilder:
         self.algs: dict[str, list[list[BytecodeType], list[int]]] = {}
         self.cur_tags: list[int] = []
         self.cur_alg: str | None = None
-        self.cur_tag_n = 0
         self.cur_inst_n = 0
 
     def build(self, parsed_code: list[Statement]) -> tuple[list[BytecodeType], dict]:
@@ -76,10 +75,8 @@ class BytecodeBuilder:
                 cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG, (tags[ifs.pop()][1],)))
                 self.cur_inst_n += 1
                 self.cur_tags.append(self.cur_inst_n)
-                self.cur_tag_n += 1
             elif isinstance(stmt, IfEnd):
                 self.cur_tags.append(self.cur_inst_n)
-                self.cur_tag_n += 1
             elif isinstance(stmt, LoopWithCountStart):
                 loops_with_count.append(i)
                 cur_ns.extend(self._expr_bc(stmt.lineno, stmt.count))
@@ -88,7 +85,6 @@ class BytecodeBuilder:
                 cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG_IF_FALSE, (tags[i][2],)))
                 self.cur_inst_n += 2
                 self.cur_tags.append(self.cur_inst_n)
-                self.cur_tag_n += 1
             elif isinstance(stmt, LoopWithCountEnd):
                 stmt_tags = tags[loops_with_count[-1]]
                 self.cur_tags.append(self.cur_inst_n)
@@ -97,7 +93,6 @@ class BytecodeBuilder:
                 cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG, (stmt_tags[0],)))
                 self.cur_inst_n += 2
                 self.cur_tags.append(self.cur_inst_n)
-                self.cur_tag_n += 2
 
             last_line = stmt.lineno
 
