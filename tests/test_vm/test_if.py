@@ -95,6 +95,20 @@ def test_if_else_with_inner_if():
 
     assert print_mock.printed_text == '2'
 
+def test_if_with_inner_loop():
+    bc = code2bc('''
+    алг нач
+        если да то
+            нц 2 раз
+                вывод 1
+            кц
+        все
+    кон''')
+    vm = create_vm(*bc)
+    vm.execute()
+
+    assert print_mock.printed_text == '11'
+
 def test_if_cond_not_bool_error():
     bc = code2bc('''
     алг нач

@@ -25,7 +25,8 @@ def setup_function(func) -> None:
 
 
 def test_simple_loop_with_count():
-    bc = code2bc('''алг нач
+    bc = code2bc('''
+    алг нач
         нц 5 раз
             вывод "тест", нс
         кц
@@ -37,7 +38,8 @@ def test_simple_loop_with_count():
     assert print_mock.printed_text == 'тест\n' * 5
 
 def test_loop_with_count_with_expr():
-    bc = code2bc('''алг нач
+    bc = code2bc('''
+    алг нач
         нц 5+2 раз
             вывод "тест", нс
         кц
@@ -48,13 +50,42 @@ def test_loop_with_count_with_expr():
 
     assert print_mock.printed_text == 'тест\n' * (5 + 2)
 
-def test_loop_with_count_expr_not_int_error():
-    bc = code2bc('''алг нач
-            нц "5" раз
-                вывод "тест", нс
+def test_loop_with_inner_if():
+    bc = code2bc('''
+    алг нач
+        нц 2 раз
+            если да то
+                вывод 1
+            все
+        кц
+    кон''')
+    vm = create_vm(*bc)
+    vm.execute()
+
+    assert print_mock.printed_text == '11'
+
+def test_loop_with_inner_loop():
+    bc = code2bc('''
+    алг нач
+        нц 2 раз
+            нц 2 раз
+                вывод 1
             кц
-        кон
-        ''')
+        кц
+    кон''')
+    vm = create_vm(*bc)
+    vm.execute()
+
+    assert print_mock.printed_text == '1111'
+
+def test_loop_with_count_expr_not_int_error():
+    bc = code2bc('''
+    алг нач
+        нц "5" раз
+            вывод "тест", нс
+        кц
+    кон
+    ''')
     vm = create_vm(*bc)
 
     with pytest.raises(RuntimeException):

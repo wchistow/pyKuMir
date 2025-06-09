@@ -1,5 +1,6 @@
 from .ast_classes import (StoreVar, Output, Op, AlgStart, AlgEnd, Call,
-                          Input, IfStart, IfEnd, ElseStart, LoopWithCountStart, LoopWithCountEnd)
+                          Input, IfStart, IfEnd, ElseStart, LoopWithCountStart,
+                          LoopWithCountEnd, Statement)
 from .bytecode import Bytecode, BytecodeType
 from .value import Value
 
@@ -21,13 +22,16 @@ class BytecodeBuilder:
         self.cur_tag_n = 0
         self.cur_inst_n = 0
 
-    def build(self, parsed_code: list) -> tuple[list[BytecodeType], dict]:
+    def build(self, parsed_code: list[Statement]) -> tuple[list[BytecodeType], dict]:
         main_alg: str | None = None
         last_line = 0
 
-        cur_loop_name = None
+        loops_with_count = []
+        ifs = []
 
-        for stmt in parsed_code:
+        tags = _get_all_statements_tags(parsed_code)
+
+        for i, stmt in enumerate(parsed_code):
             if self.cur_alg is not None:
                 cur_ns = self.algs[self.cur_alg][0]
             else:
@@ -64,33 +68,36 @@ class BytecodeBuilder:
                 cur_ns.append((stmt.lineno, Bytecode.CALL, (stmt.alg_name,)))
                 self.cur_inst_n += 1
             elif isinstance(stmt, IfStart):
+                ifs.append(i)
                 cur_ns.extend(self._expr_bc(stmt.lineno, stmt.cond))
-                cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG_IF_FALSE, (self.cur_tag_n,)))
+                cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG_IF_FALSE, (tags[i][0],)))
                 self.cur_inst_n += 1
-                self.cur_tag_n += 1
             elif isinstance(stmt, ElseStart):
-                cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG, (self.cur_tag_n,)))
+                cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG, (tags[ifs.pop()][1],)))
                 self.cur_inst_n += 1
-                self.cur_tag_n += 1
                 self.cur_tags.append(self.cur_inst_n)
+                self.cur_tag_n += 1
             elif isinstance(stmt, IfEnd):
                 self.cur_tags.append(self.cur_inst_n)
+                self.cur_tag_n += 1
             elif isinstance(stmt, LoopWithCountStart):
-                cur_loop_name = str(self.cur_tag_n)
+                loops_with_count.append(i)
                 cur_ns.extend(self._expr_bc(stmt.lineno, stmt.count))
-                cur_ns.append((stmt.lineno, Bytecode.STORE, ('цел', (cur_loop_name,))))
-                cur_ns.extend(self._loop_with_count_cond(stmt.lineno, cur_loop_name))
-                cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG_IF_FALSE, (self.cur_tag_n+2,)))
+                cur_ns.append((stmt.lineno, Bytecode.STORE, ('цел', (str(i),))))
+                cur_ns.extend(self._loop_with_count_cond(stmt.lineno, str(i)))
+                cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG_IF_FALSE, (tags[i][2],)))
                 self.cur_inst_n += 2
                 self.cur_tags.append(self.cur_inst_n)
                 self.cur_tag_n += 1
             elif isinstance(stmt, LoopWithCountEnd):
+                stmt_tags = tags[loops_with_count[-1]]
                 self.cur_tags.append(self.cur_inst_n)
-                cur_ns.extend(self._loop_with_count_cond(stmt.lineno, cur_loop_name))
-                cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG_IF_FALSE, (self.cur_tag_n+1,)))
-                cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG, (self.cur_tag_n-1,)))
+                cur_ns.extend(self._loop_with_count_cond(stmt.lineno, str(loops_with_count.pop())))
+                cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG_IF_FALSE, (stmt_tags[2],)))
+                cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG, (stmt_tags[0],)))
                 self.cur_inst_n += 2
                 self.cur_tags.append(self.cur_inst_n)
+                self.cur_tag_n += 2
 
             last_line = stmt.lineno
 
@@ -113,12 +120,8 @@ class BytecodeBuilder:
 
     def _expr_bc(self, lineno: int, expr: list[Value | Op]) -> list[BytecodeType]:
         """
-        Превращает обратную польскую запись вида `(2, 3, Op(op='+'))` в набор команд байт-кода, например:
-        ```
-        LOAD 2
-        LOAD 3
-        BIN_OP +
-        ```
+        Превращает обратную польскую запись вида `(2, 3, Op(op='+'))`
+        в набор команд байт-кода вида `LOAD 2, LOAD 3, BIN_OP +`.
         """
         res: list[BytecodeType] = []
         for v in expr:
@@ -130,3 +133,33 @@ class BytecodeBuilder:
                 res.append((lineno, Bytecode.LOAD_CONST, (v,)))
             self.cur_inst_n += 1
         return res
+
+
+def _get_all_statements_tags(parsed: list[Statement]) -> dict[int, list[int]]:
+    """"""
+    res = {}
+    ifs = []
+    loops_with_count = []
+
+    cur_tag_n = 0
+
+    for i, stmt in enumerate(parsed):
+        if isinstance(stmt, IfStart):
+            ifs.append(i)
+            res[i] = []
+        elif isinstance(stmt, LoopWithCountStart):
+            loops_with_count.append(i)
+            res[i] = [cur_tag_n]
+            cur_tag_n += 1
+
+        elif isinstance(stmt, ElseStart):
+            res[ifs[-1]].append(cur_tag_n)
+            cur_tag_n += 1
+        elif isinstance(stmt, IfEnd):
+            res[ifs.pop()].append(cur_tag_n)
+            cur_tag_n += 1
+        elif isinstance(stmt, LoopWithCountEnd):
+            res[loops_with_count.pop()].extend((cur_tag_n, cur_tag_n+1))
+            cur_tag_n += 2
+
+    return res
