@@ -131,7 +131,9 @@ class BytecodeBuilder:
 
 
 def _get_all_statements_tags(parsed: list[Statement]) -> dict[int, list[int]]:
-    """"""
+    """
+    :return: словарь вида `{индекс_инструкции: [список тегов, которые она должна использовать]}`
+    """
     res = {}
     ifs = []
     loops_with_count = []
