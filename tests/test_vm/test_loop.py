@@ -92,14 +92,25 @@ def test_loop_while():
 
     assert print_mock.printed_text == '5\n4\n3\n2\n1\n'
 
+def test_loop_for():
+    bc = code2bc('''
+    алг нач
+        нц для а от 0 до 5
+            вывод а, нс
+        кц
+    кон''')
+    vm = create_vm(*bc)
+    vm.execute()
+
+    assert print_mock.printed_text == '0\n1\n2\n3\n4\n5\n'
+
 def test_loop_with_count_expr_not_int_error():
     bc = code2bc('''
     алг нач
         нц "5" раз
             вывод "тест", нс
         кц
-    кон
-    ''')
+    кон''')
     vm = create_vm(*bc)
 
     with pytest.raises(RuntimeException):

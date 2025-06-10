@@ -3,7 +3,7 @@ from typing import Iterable
 
 from .ast_classes import (AlgStart, AlgEnd, Call, Input, IfStart, IfEnd, Statement,
                           StoreVar, Op, Output, ElseStart, LoopWithCountStart, LoopWithCountEnd,
-                          LoopWhileStart, LoopWhileEnd)
+                          LoopWhileStart, LoopWhileEnd, LoopForStart, LoopForEnd)
 from .value import Value
 from .tokenizer import Tokenizer
 from .exceptions import SyntaxException
@@ -14,9 +14,12 @@ class Env(Enum):
     INTRODUCTION = auto()
     MAIN = auto()
     ALG = auto()
+
     IF = auto()
+
     LOOP_WITH_COUNT = auto()
     LOOP_WHILE = auto()
+    LOOP_FOR = auto()
 
 
 class Parser:
@@ -135,6 +138,9 @@ class Parser:
         elif self.cur_token.value == 'кц' and self.envs[-1] == Env.LOOP_WHILE:
             self.envs.pop()
             self.res.append(LoopWhileEnd(self.line))
+        elif self.cur_token.value == 'кц' and self.envs[-1] == Env.LOOP_FOR:
+            self.envs.pop()
+            self.res.append(LoopForEnd(self.line))
         elif self.cur_token.kind == 'NAME':
             name = self.cur_token.value
             self._next_token()
@@ -236,6 +242,8 @@ class Parser:
         self._next_token()
         if self.cur_token.value == 'пока':
             self._handle_loop_while()
+        elif self.cur_token.value == 'для':
+            self._handle_loop_for()
         else:
             self._handle_loop_with_count(self._parse_expr())
 
@@ -253,6 +261,30 @@ class Parser:
             raise SyntaxException(self.line, self.cur_token.value)
         self.envs.append(Env.LOOP_WHILE)
         self.res.append(LoopWhileStart(self.line - 1, cond))
+
+    def _handle_loop_for(self):
+        self._next_token()
+
+        if self.cur_token.kind != 'NAME':
+            raise SyntaxException(self.line, self.cur_token.value, 'должно быть имя')
+        target = self.cur_token.value
+
+        self._next_token()
+        if self.cur_token.value != 'от':
+            raise SyntaxException(self.line, self.cur_token.value)
+        self._next_token()
+        from_expr = self._parse_expr()
+
+        if self.cur_token.value != 'до':
+            raise SyntaxException(self.line, self.cur_token.value)
+        self._next_token()
+        to_expr = self._parse_expr()
+
+        if self.cur_token.kind != 'NEWLINE':
+            raise SyntaxException(self.line, self.cur_token.value)
+
+        self.envs.append(Env.LOOP_FOR)
+        self.res.append(LoopForStart(self.line - 1, target, from_expr, to_expr))
 
     def _parse_expr(self) -> list[Value | Op]:
         expr = []

@@ -74,3 +74,14 @@ class LoopWhileStart(Statement):
 @dataclass
 class LoopWhileEnd(Statement):
     lineno: int
+
+@dataclass
+class LoopForStart(Statement):
+    lineno: int
+    target: str
+    from_expr: Expr
+    to_expr: Expr
+
+@dataclass
+class LoopForEnd(Statement):
+    lineno: int

@@ -95,3 +95,22 @@ def test_parse_simple_loop_while_with_expr():
         ast_classes.LoopWhileEnd(4),
         ast_classes.AlgEnd(5)
     ]
+
+def test_parse_simple_loop_for():
+    code = '''
+    алг нач
+        нц для а от 0 до 5
+            вывод а
+        кц
+    кон'''
+    parser = Parser(code)
+    parsed = parser.parse()
+
+    assert parsed == [
+        ast_classes.AlgStart(1, is_main=True, name=''),
+        ast_classes.LoopForStart(2, target='а', from_expr=[Value(typename='цел', value=0)],
+                                 to_expr=[Value(typename='цел', value=5)]),
+        ast_classes.Output(3, exprs=[[Value('get-name', 'а')]]),
+        ast_classes.LoopForEnd(4),
+        ast_classes.AlgEnd(5)
+    ]

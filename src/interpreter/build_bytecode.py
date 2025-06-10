@@ -1,6 +1,7 @@
 from .ast_classes import (StoreVar, Output, Op, AlgStart, AlgEnd, Call,
                           Input, IfStart, IfEnd, ElseStart, LoopWithCountStart,
-                          LoopWithCountEnd, LoopWhileStart, LoopWhileEnd, Statement)
+                          LoopWithCountEnd, LoopWhileStart, LoopWhileEnd, Statement, LoopForStart,
+                          LoopForEnd, Expr)
 from .bytecode import Bytecode, BytecodeType
 from .value import Value
 
@@ -28,6 +29,8 @@ class BytecodeBuilder:
         loops_with_count = []
         loops_while_indexes = []
         loops_while_stmts = []
+        loops_for_indexes = []
+        loops_for = []
         ifs = []
 
         tags = _get_all_statements_tags(parsed_code)
@@ -110,6 +113,27 @@ class BytecodeBuilder:
                 cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG, (stmt_tags[0],)))
                 self.cur_inst_n += 2
                 self.cur_tags.append(self.cur_inst_n)
+            elif isinstance(stmt, LoopForStart):
+                loops_for_indexes.append(i)
+                loops_for.append((stmt.target, stmt.from_expr, stmt.to_expr))
+                cur_ns.extend(self._expr_bc(stmt.lineno, stmt.from_expr))
+                cur_ns.append((stmt.lineno, Bytecode.LOAD_CONST, (Value('цел', 1),)))
+                cur_ns.append((stmt.lineno, Bytecode.BIN_OP, ('-',)))
+                cur_ns.append((stmt.lineno, Bytecode.STORE, ('цел', (stmt.target,))))
+                cur_ns.extend(self._loop_for_cond(stmt.lineno, stmt.target, stmt.to_expr))
+                cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG_IF_FALSE, (tags[i][2],)))
+                self.cur_inst_n += 4
+                self.cur_tags.append(self.cur_inst_n)
+            elif isinstance(stmt, LoopForEnd):
+                stmt_tags = tags[loops_for_indexes[-1]]
+                loop = loops_for.pop()
+                self.cur_tags.append(self.cur_inst_n)
+                cur_ns.extend(self._expr_bc(stmt.lineno, loop[1]))
+                cur_ns.extend(self._loop_for_cond(stmt.lineno, loop[0], loop[2]))
+                cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG_IF_FALSE, (stmt_tags[2],)))
+                cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG, (stmt_tags[0],)))
+                self.cur_inst_n += 2
+                self.cur_tags.append(self.cur_inst_n)
 
             last_line = stmt.lineno
 
@@ -129,6 +153,19 @@ class BytecodeBuilder:
             (lineno, Bytecode.BIN_OP, ('>',))
         ]
         self.cur_inst_n += 7
+        return res
+
+    def _loop_for_cond(self, lineno: int, target: str, to_expr: Expr) -> list[Bytecode]:
+        res = [
+            (lineno, Bytecode.LOAD_NAME, (target,)),
+            (lineno, Bytecode.LOAD_CONST, (Value('цел', 1),)),
+            (lineno, Bytecode.BIN_OP, ('+',)),
+            (lineno, Bytecode.STORE, (None, (target,))),
+            (lineno, Bytecode.LOAD_NAME, (target,)),
+            *self._expr_bc(lineno, to_expr),
+            (lineno, Bytecode.BIN_OP, ('<=',))
+        ]
+        self.cur_inst_n += 6
         return res
 
     def _expr_bc(self, lineno: int, expr: list[Value | Op]) -> list[BytecodeType]:
@@ -162,7 +199,7 @@ def _get_all_statements_tags(parsed: list[Statement]) -> dict[int, list[int]]:
         if isinstance(stmt, IfStart):
             ifs.append(i)
             res[i] = []
-        elif isinstance(stmt, (LoopWithCountStart, LoopWhileStart)):
+        elif isinstance(stmt, (LoopWithCountStart, LoopWhileStart, LoopForStart)):
             loops.append(i)
             res[i] = [cur_tag_n]
             cur_tag_n += 1
@@ -173,7 +210,7 @@ def _get_all_statements_tags(parsed: list[Statement]) -> dict[int, list[int]]:
         elif isinstance(stmt, IfEnd):
             res[ifs.pop()].append(cur_tag_n)
             cur_tag_n += 1
-        elif isinstance(stmt, (LoopWithCountEnd, LoopWhileEnd)):
+        elif isinstance(stmt, (LoopWithCountEnd, LoopWhileEnd, LoopForEnd)):
             res[loops.pop()].extend((cur_tag_n, cur_tag_n+1))
             cur_tag_n += 2
 
