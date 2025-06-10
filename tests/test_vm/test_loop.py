@@ -78,6 +78,20 @@ def test_loop_with_inner_loop():
 
     assert print_mock.printed_text == '1111'
 
+def test_loop_while():
+    bc = code2bc('''
+    алг нач
+        цел а := 5
+        нц пока а > 0
+            вывод а, нс
+            а := а - 1
+        кц
+    кон''')
+    vm = create_vm(*bc)
+    vm.execute()
+
+    assert print_mock.printed_text == '5\n4\n3\n2\n1\n'
+
 def test_loop_with_count_expr_not_int_error():
     bc = code2bc('''
     алг нач

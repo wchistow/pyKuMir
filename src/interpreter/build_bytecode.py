@@ -1,6 +1,6 @@
 from .ast_classes import (StoreVar, Output, Op, AlgStart, AlgEnd, Call,
                           Input, IfStart, IfEnd, ElseStart, LoopWithCountStart,
-                          LoopWithCountEnd, Statement)
+                          LoopWithCountEnd, LoopWhileStart, LoopWhileEnd, Statement)
 from .bytecode import Bytecode, BytecodeType
 from .value import Value
 
@@ -26,6 +26,8 @@ class BytecodeBuilder:
         last_line = 0
 
         loops_with_count = []
+        loops_while_indexes = []
+        loops_while_stmts = []
         ifs = []
 
         tags = _get_all_statements_tags(parsed_code)
@@ -93,11 +95,27 @@ class BytecodeBuilder:
                 cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG, (stmt_tags[0],)))
                 self.cur_inst_n += 2
                 self.cur_tags.append(self.cur_inst_n)
+            elif isinstance(stmt, LoopWhileStart):
+                loops_while_stmts.append(stmt.cond)
+                loops_while_indexes.append(i)
+                cur_ns.extend(self._expr_bc(stmt.lineno, stmt.cond))
+                cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG_IF_FALSE, (tags[i][2],)))
+                self.cur_inst_n += 1
+                self.cur_tags.append(self.cur_inst_n)
+            elif isinstance(stmt, LoopWhileEnd):
+                stmt_tags = tags[loops_while_indexes.pop()]
+                self.cur_tags.append(self.cur_inst_n)
+                cur_ns.extend(self._expr_bc(stmt.lineno, loops_while_stmts.pop()))
+                cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG_IF_FALSE, (stmt_tags[2],)))
+                cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG, (stmt_tags[0],)))
+                self.cur_inst_n += 2
+                self.cur_tags.append(self.cur_inst_n)
 
             last_line = stmt.lineno
 
         if main_alg is not None:
             self.bytecode.append((last_line, Bytecode.CALL, (main_alg,)))
+
         return self.bytecode, self.algs
 
     def _loop_with_count_cond(self, lineno: int, loop_name: str) -> list[BytecodeType]:
@@ -136,7 +154,7 @@ def _get_all_statements_tags(parsed: list[Statement]) -> dict[int, list[int]]:
     """
     res = {}
     ifs = []
-    loops_with_count = []
+    loops = []
 
     cur_tag_n = 0
 
@@ -144,8 +162,8 @@ def _get_all_statements_tags(parsed: list[Statement]) -> dict[int, list[int]]:
         if isinstance(stmt, IfStart):
             ifs.append(i)
             res[i] = []
-        elif isinstance(stmt, LoopWithCountStart):
-            loops_with_count.append(i)
+        elif isinstance(stmt, (LoopWithCountStart, LoopWhileStart)):
+            loops.append(i)
             res[i] = [cur_tag_n]
             cur_tag_n += 1
 
@@ -155,8 +173,8 @@ def _get_all_statements_tags(parsed: list[Statement]) -> dict[int, list[int]]:
         elif isinstance(stmt, IfEnd):
             res[ifs.pop()].append(cur_tag_n)
             cur_tag_n += 1
-        elif isinstance(stmt, LoopWithCountEnd):
-            res[loops_with_count.pop()].extend((cur_tag_n, cur_tag_n+1))
+        elif isinstance(stmt, (LoopWithCountEnd, LoopWhileEnd)):
+            res[loops.pop()].extend((cur_tag_n, cur_tag_n+1))
             cur_tag_n += 2
 
     return res

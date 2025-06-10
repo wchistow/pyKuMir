@@ -2,7 +2,8 @@ from enum import auto, Enum
 from typing import Iterable
 
 from .ast_classes import (AlgStart, AlgEnd, Call, Input, IfStart, IfEnd, Statement,
-                          StoreVar, Op, Output, ElseStart, LoopWithCountStart, LoopWithCountEnd)
+                          StoreVar, Op, Output, ElseStart, LoopWithCountStart, LoopWithCountEnd,
+                          LoopWhileStart, LoopWhileEnd)
 from .value import Value
 from .tokenizer import Tokenizer
 from .exceptions import SyntaxException
@@ -15,6 +16,7 @@ class Env(Enum):
     ALG = auto()
     IF = auto()
     LOOP_WITH_COUNT = auto()
+    LOOP_WHILE = auto()
 
 
 class Parser:
@@ -130,6 +132,9 @@ class Parser:
         elif self.cur_token.value == 'кц' and self.envs[-1] == Env.LOOP_WITH_COUNT:
             self.envs.pop()
             self.res.append(LoopWithCountEnd(self.line))
+        elif self.cur_token.value == 'кц' and self.envs[-1] == Env.LOOP_WHILE:
+            self.envs.pop()
+            self.res.append(LoopWhileEnd(self.line))
         elif self.cur_token.kind == 'NAME':
             name = self.cur_token.value
             self._next_token()
@@ -229,13 +234,10 @@ class Parser:
 
     def _handle_loop(self):
         self._next_token()
-        try:
-            count = self._parse_expr()
-        except SyntaxException:
-            # другие циклы или ошибки
-            raise SyntaxException(self.line, self.cur_token.value) from None
+        if self.cur_token.value == 'пока':
+            self._handle_loop_while()
         else:
-            self._handle_loop_with_count(count)
+            self._handle_loop_with_count(self._parse_expr())
 
     def _handle_loop_with_count(self, count):
         if self.cur_token.value != 'раз':
@@ -243,6 +245,14 @@ class Parser:
 
         self.envs.append(Env.LOOP_WITH_COUNT)
         self.res.append(LoopWithCountStart(self.line, count))
+
+    def _handle_loop_while(self):
+        self._next_token()
+        cond = self._parse_expr()
+        if self.cur_token.kind != 'NEWLINE':
+            raise SyntaxException(self.line, self.cur_token.value)
+        self.envs.append(Env.LOOP_WHILE)
+        self.res.append(LoopWhileStart(self.line - 1, cond))
 
     def _parse_expr(self) -> list[Value | Op]:
         expr = []

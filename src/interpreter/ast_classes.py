@@ -65,3 +65,12 @@ class LoopWithCountStart(Statement):
 @dataclass
 class LoopWithCountEnd(Statement):
     lineno: int
+
+@dataclass
+class LoopWhileStart(Statement):
+    lineno: int
+    cond: Expr
+
+@dataclass
+class LoopWhileEnd(Statement):
+    lineno: int
