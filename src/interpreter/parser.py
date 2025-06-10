@@ -280,11 +280,15 @@ class Parser:
         self._next_token()
         to_expr = self._parse_expr()
 
+        step = [Value('цел', 1)]
+        if self.cur_token.value == 'шаг':
+            self._next_token()
+            step = self._parse_expr()
         if self.cur_token.kind != 'NEWLINE':
             raise SyntaxException(self.line, self.cur_token.value)
 
         self.envs.append(Env.LOOP_FOR)
-        self.res.append(LoopForStart(self.line - 1, target, from_expr, to_expr))
+        self.res.append(LoopForStart(self.line - 1, target, from_expr, to_expr, step))
 
     def _parse_expr(self) -> list[Value | Op]:
         expr = []

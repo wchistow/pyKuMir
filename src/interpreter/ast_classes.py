@@ -81,6 +81,7 @@ class LoopForStart(Statement):
     target: str
     from_expr: Expr
     to_expr: Expr
+    step: Expr
 
 @dataclass
 class LoopForEnd(Statement):

@@ -115,12 +115,12 @@ class BytecodeBuilder:
                 self.cur_tags.append(self.cur_inst_n)
             elif isinstance(stmt, LoopForStart):
                 loops_for_indexes.append(i)
-                loops_for.append((stmt.target, stmt.from_expr, stmt.to_expr))
+                loops_for.append((stmt.target, stmt.from_expr, stmt.to_expr, stmt.step))
                 cur_ns.extend(self._expr_bc(stmt.lineno, stmt.from_expr))
-                cur_ns.append((stmt.lineno, Bytecode.LOAD_CONST, (Value('цел', 1),)))
-                cur_ns.append((stmt.lineno, Bytecode.BIN_OP, ('-',)))
                 cur_ns.append((stmt.lineno, Bytecode.STORE, ('цел', (stmt.target,))))
-                cur_ns.extend(self._loop_for_cond(stmt.lineno, stmt.target, stmt.to_expr))
+                cur_ns.append((stmt.lineno, Bytecode.LOAD_NAME, (stmt.target,)))
+                cur_ns.extend(self._expr_bc(stmt.lineno, stmt.to_expr))
+                cur_ns.append((stmt.lineno, Bytecode.BIN_OP, ('<=',)))
                 cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG_IF_FALSE, (tags[i][2],)))
                 self.cur_inst_n += 4
                 self.cur_tags.append(self.cur_inst_n)
@@ -129,7 +129,7 @@ class BytecodeBuilder:
                 loop = loops_for.pop()
                 self.cur_tags.append(self.cur_inst_n)
                 cur_ns.extend(self._expr_bc(stmt.lineno, loop[1]))
-                cur_ns.extend(self._loop_for_cond(stmt.lineno, loop[0], loop[2]))
+                cur_ns.extend(self._loop_for_cond(stmt.lineno, loop[0], loop[2], loop[3]))
                 cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG_IF_FALSE, (stmt_tags[2],)))
                 cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG, (stmt_tags[0],)))
                 self.cur_inst_n += 2
@@ -155,17 +155,17 @@ class BytecodeBuilder:
         self.cur_inst_n += 7
         return res
 
-    def _loop_for_cond(self, lineno: int, target: str, to_expr: Expr) -> list[Bytecode]:
+    def _loop_for_cond(self, lineno: int, target: str, to_expr: Expr, step: Expr) -> list[Bytecode]:
         res = [
             (lineno, Bytecode.LOAD_NAME, (target,)),
-            (lineno, Bytecode.LOAD_CONST, (Value('цел', 1),)),
+            *self._expr_bc(lineno, step),
             (lineno, Bytecode.BIN_OP, ('+',)),
             (lineno, Bytecode.STORE, (None, (target,))),
             (lineno, Bytecode.LOAD_NAME, (target,)),
             *self._expr_bc(lineno, to_expr),
             (lineno, Bytecode.BIN_OP, ('<=',))
         ]
-        self.cur_inst_n += 6
+        self.cur_inst_n += 5
         return res
 
     def _expr_bc(self, lineno: int, expr: list[Value | Op]) -> list[BytecodeType]:
