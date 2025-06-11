@@ -43,10 +43,12 @@ class VM:
             Bytecode.CALL: lambda inst: self.call(inst[0], inst[2][0]),
             Bytecode.RET: lambda inst: self.call_stack.pop(),
             Bytecode.JUMP_TAG: lambda inst: self.jump_tag(inst[2][0]),
-            Bytecode.JUMP_TAG_IF_FALSE: lambda inst: self.jump_tag_if_false(inst[0], inst[2][0])
+            Bytecode.JUMP_TAG_IF_FALSE: lambda inst: self.jump_tag_if_false(inst[0], inst[2][0]),
+            Bytecode.JUMP_TAG_IF_TRUE: lambda inst: self.jump_tag_if_true(inst[0], inst[2][0])
         }
 
-        self.INSTS_WITHOUT_INCREASE_COUNTER = {Bytecode.JUMP_TAG, Bytecode.JUMP_TAG_IF_FALSE}
+        self.INSTS_WITHOUT_INCREASE_COUNTER = {Bytecode.JUMP_TAG, Bytecode.JUMP_TAG_IF_FALSE,
+                                               Bytecode.JUMP_TAG_IF_TRUE}
 
     def execute(self) -> None:
         self._execute(self.bytecode)
@@ -192,8 +194,17 @@ class VM:
     def jump_tag_if_false(self, lineno: int, tag: int) -> None:
         cond = self.stack.pop()
         if cond.typename != 'лог':
-            raise RuntimeException(lineno, 'условие после "если" не логическое')
-        if cond.value != 'да':
+            raise RuntimeException(lineno, 'условие не логическое')
+        if cond.value == 'нет':
+            self.jump_tag(tag)
+        else:
+            self.cur_inst_n += 1
+
+    def jump_tag_if_true(self, lineno: int, tag: int) -> None:
+        cond = self.stack.pop()
+        if cond.typename != 'лог':
+            raise RuntimeException(lineno, 'условие не логическое')
+        if cond.value == 'да':
             self.jump_tag(tag)
         else:
             self.cur_inst_n += 1

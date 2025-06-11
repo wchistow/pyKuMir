@@ -116,6 +116,20 @@ def test_loop_for_with_step():
 
     assert print_mock.printed_text == '0\n2\n4\n'
 
+def test_loop_until():
+    bc = code2bc('''
+    алг нач
+        цел а := 0
+        нц
+            вывод а, нс
+            а := а + 1
+        кц при а < 2
+    кон''')
+    vm = create_vm(*bc)
+    vm.execute()
+
+    assert print_mock.printed_text == '0\n1\n'
+
 def test_loop_with_count_expr_not_int_error():
     bc = code2bc('''
     алг нач

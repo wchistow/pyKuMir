@@ -1,7 +1,7 @@
 from .ast_classes import (StoreVar, Output, Op, AlgStart, AlgEnd, Call,
                           Input, IfStart, IfEnd, ElseStart, LoopWithCountStart,
                           LoopWithCountEnd, LoopWhileStart, LoopWhileEnd, Statement, LoopForStart,
-                          LoopForEnd, Expr)
+                          LoopForEnd, Expr, LoopUntilStart, LoopUntilEnd)
 from .bytecode import Bytecode, BytecodeType
 from .value import Value
 
@@ -31,6 +31,7 @@ class BytecodeBuilder:
         loops_while_stmts = []
         loops_for_indexes = []
         loops_for = []
+        loops_until_indexes = []
         ifs = []
 
         tags = _get_all_statements_tags(parsed_code)
@@ -125,7 +126,7 @@ class BytecodeBuilder:
                 self.cur_inst_n += 4
                 self.cur_tags.append(self.cur_inst_n)
             elif isinstance(stmt, LoopForEnd):
-                stmt_tags = tags[loops_for_indexes[-1]]
+                stmt_tags = tags[loops_for_indexes.pop()]
                 loop = loops_for.pop()
                 self.cur_tags.append(self.cur_inst_n)
                 cur_ns.extend(self._expr_bc(stmt.lineno, loop[1]))
@@ -134,6 +135,14 @@ class BytecodeBuilder:
                 cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG, (stmt_tags[0],)))
                 self.cur_inst_n += 2
                 self.cur_tags.append(self.cur_inst_n)
+            elif isinstance(stmt, LoopUntilStart):
+                loops_until_indexes.append(i)
+                self.cur_tags.append(self.cur_inst_n)
+            elif isinstance(stmt, LoopUntilEnd):
+                stmt_tags = tags[loops_until_indexes.pop()]
+                cur_ns.extend(self._expr_bc(stmt.lineno, stmt.cond))
+                cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG_IF_TRUE, (stmt_tags[0],)))
+                self.cur_inst_n += 1
 
             last_line = stmt.lineno
 
@@ -199,7 +208,7 @@ def _get_all_statements_tags(parsed: list[Statement]) -> dict[int, list[int]]:
         if isinstance(stmt, IfStart):
             ifs.append(i)
             res[i] = []
-        elif isinstance(stmt, (LoopWithCountStart, LoopWhileStart, LoopForStart)):
+        elif isinstance(stmt, (LoopWithCountStart, LoopWhileStart, LoopForStart, LoopUntilStart)):
             loops.append(i)
             res[i] = [cur_tag_n]
             cur_tag_n += 1

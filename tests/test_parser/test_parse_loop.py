@@ -135,3 +135,39 @@ def test_parse_loop_for_with_step():
         ast_classes.LoopForEnd(4),
         ast_classes.AlgEnd(5)
     ]
+
+def test_parse_infinite_loop():
+    code = '''
+    алг нач
+        нц
+            вывод 1
+        кц
+    кон'''
+    parser = Parser(code)
+    parsed = parser.parse()
+
+    assert parsed == [
+        ast_classes.AlgStart(1, is_main=True, name=''),
+        ast_classes.LoopUntilStart(2),
+        ast_classes.Output(3, exprs=[[Value('цел', 1)]]),
+        ast_classes.LoopUntilEnd(4, cond=[Value('лог', 'да')]),
+        ast_classes.AlgEnd(5)
+    ]
+
+def test_parse_loop_until():
+    code = '''
+    алг нач
+        нц
+            вывод 1
+        кц при да
+    кон'''
+    parser = Parser(code)
+    parsed = parser.parse()
+
+    assert parsed == [
+        ast_classes.AlgStart(1, is_main=True, name=''),
+        ast_classes.LoopUntilStart(2),
+        ast_classes.Output(3, exprs=[[Value('цел', 1)]]),
+        ast_classes.LoopUntilEnd(4, cond=[Value('лог', 'да')]),
+        ast_classes.AlgEnd(5)
+    ]

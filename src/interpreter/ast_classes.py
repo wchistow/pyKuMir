@@ -86,3 +86,12 @@ class LoopForStart(Statement):
 @dataclass
 class LoopForEnd(Statement):
     lineno: int
+
+@dataclass
+class LoopUntilStart(Statement):
+    lineno: int
+
+@dataclass
+class LoopUntilEnd(Statement):
+    lineno: int
+    cond: Expr
