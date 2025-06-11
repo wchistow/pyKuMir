@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import (QWidget, QSplitter, QGridLayout,
 class DocView(QWidget):
     PRETTY_NAMES = {
         'lang/algs.md': 'Алгоритмы',
+        'lang/commands.md': 'Команды',
         'lang/comments.md': 'Комментарии',
         'lang/exprs.md': 'Вычисления',
         'lang/if.md': 'Условный оператор',

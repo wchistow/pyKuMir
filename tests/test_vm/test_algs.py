@@ -50,6 +50,17 @@ def test_call_alg_with_space_in_name():
     vm.execute()
     assert print_mock.printed_text == '5'
 
+def test_exit_in_alg():
+    bytecode = code2bc('''
+    алг нач
+      вывод 1
+      выход
+      вывод 2
+    кон''')
+    vm = create_vm(*bytecode)
+    vm.execute()
+    assert print_mock.printed_text == '1'
+
 def test_call_undef_alg_error():
     bytecode = code2bc('алг\nнач\nтест\nкон')
     vm = create_vm(*bytecode)

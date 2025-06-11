@@ -4,7 +4,7 @@ from typing import Iterable
 from .ast_classes import (AlgStart, AlgEnd, Call, Input, IfStart, IfEnd, Statement,
                           StoreVar, Op, Output, ElseStart, LoopWithCountStart, LoopWithCountEnd,
                           LoopWhileStart, LoopWhileEnd, LoopForStart, LoopForEnd, LoopUntilStart,
-                          LoopUntilEnd)
+                          LoopUntilEnd, Exit)
 from .value import Value
 from .tokenizer import Tokenizer
 from .exceptions import SyntaxException
@@ -22,6 +22,9 @@ class Env(Enum):
     LOOP_WHILE = auto()
     LOOP_FOR = auto()
     LOOP_UNTIL = auto()
+
+
+LOOP_ENVS = {Env.LOOP_WITH_COUNT, Env.LOOP_WHILE, Env.LOOP_FOR, Env.LOOP_UNTIL}
 
 
 class Parser:
@@ -125,6 +128,8 @@ class Parser:
             self._handle_output()
         elif self.cur_token.value == 'ввод':
             self._handle_input()
+        elif self.cur_token.value == 'выход' and Env.INTRODUCTION not in self.envs:
+            self.res.append(Exit(self.line))
         elif self.cur_token.value == 'если' and Env.INTRODUCTION not in self.envs:
             self._handle_if()
         elif self.cur_token.value == 'иначе' and self.envs[-1] == Env.IF:

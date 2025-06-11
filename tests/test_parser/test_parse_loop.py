@@ -171,3 +171,36 @@ def test_parse_loop_until():
         ast_classes.LoopUntilEnd(4, cond=[Value('лог', 'да')]),
         ast_classes.AlgEnd(5)
     ]
+
+def test_parse_break():
+    code = '''
+    алг нач
+        нц
+            вывод 1
+            выход
+        кц
+    кон'''
+    parser = Parser(code)
+    parsed = parser.parse()
+
+    assert parsed == [
+        ast_classes.AlgStart(1, is_main=True, name=''),
+        ast_classes.LoopUntilStart(2),
+        ast_classes.Output(3, exprs=[[Value('цел', 1)]]),
+        ast_classes.Exit(4),
+        ast_classes.LoopUntilEnd(5, cond=[Value('лог', 'да')]),
+        ast_classes.AlgEnd(6)
+    ]
+
+def test_parse_break_outside_loop_error():
+    code = '''
+    алг нач
+        если да
+            вывод 1
+            выход
+        все
+    кон'''
+    parser = Parser(code)
+
+    with pytest.raises(SyntaxException):
+        parser.parse()

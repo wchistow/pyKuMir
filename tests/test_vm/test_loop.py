@@ -130,6 +130,23 @@ def test_loop_until():
 
     assert print_mock.printed_text == '0\n1\n'
 
+def test_infinite_loop_with_exit():
+    bc = code2bc('''
+    алг нач
+        цел а := 0
+        нц
+            вывод а, нс
+            если а > 5 то
+                выход
+            все
+            а := а + 1
+        кц
+    кон''')
+    vm = create_vm(*bc)
+    vm.execute()
+
+    assert print_mock.printed_text == '0\n1\n2\n3\n4\n5\n6\n'
+
 def test_loop_with_count_expr_not_int_error():
     bc = code2bc('''
     алг нач

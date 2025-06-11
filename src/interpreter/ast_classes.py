@@ -95,3 +95,7 @@ class LoopUntilStart(Statement):
 class LoopUntilEnd(Statement):
     lineno: int
     cond: Expr
+
+@dataclass
+class Exit(Statement):
+    lineno: int
