@@ -1,6 +1,6 @@
 from threading import Thread
 
-from PyQt6.QtCore import QEvent, Qt
+from PyQt6.QtCore import QEvent, Qt, pyqtSignal
 from PyQt6.QtGui import QTextCursor
 from PyQt6.QtWidgets import QTextEdit
 
@@ -13,6 +13,10 @@ CSS = '''<style>
 
 
 class Console(QTextEdit):
+
+    output = pyqtSignal(str)
+    output_sys = pyqtSignal(str)
+
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.insertHtml(CSS)
@@ -21,6 +25,9 @@ class Console(QTextEdit):
         self.input_completed = False
         self.input_text = ''
         self.inputting = False
+
+        self.output.connect(self._output)
+        self.output_sys.connect(self._output_sys)
 
     def keyPressEvent(self, e):
         super().keyPressEvent(e)
@@ -37,12 +44,12 @@ class Console(QTextEdit):
         cursor.movePosition(QTextCursor.MoveOperation.End)
         self.setTextCursor(cursor)
 
-    def output_sys(self, text: str) -> None:
+    def _output_sys(self, text: str) -> None:
         self._cursor_to_end()
         html_text = text.replace("\n", "<br />")
         self.insertHtml(f'<span class="sys">{html_text}</span>')
-    
-    def output(self, text: str) -> None:
+
+    def _output(self, text: str) -> None:
         self._cursor_to_end()
         self.insertHtml(text)
 

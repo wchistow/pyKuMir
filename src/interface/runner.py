@@ -10,13 +10,13 @@ class Runner:
         self.console = console
 
     def _output(self, s: str):
-        self.console.output(s)
+        self.console.output.emit(s)
 
     def _input(self) -> str:
         return self.console.input()
 
     def run(self, code: str):
-        self.console.output_sys(
+        self.console.output_sys.emit(
             f'>> {datetime.now().strftime("%H:%M:%S")} - Новая программа - Начало выполнения\n'
         )
         try:
@@ -32,6 +32,6 @@ class Runner:
                 vm.execute()
             except RuntimeException as e:
                 print(e.args)
-        self.console.output_sys(
+        self.console.output_sys.emit(
             f'\n>> {datetime.now().strftime("%H:%M:%S")} - Новая программа - Выполнение завершено\n'
         )
