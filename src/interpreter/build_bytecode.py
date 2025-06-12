@@ -128,7 +128,7 @@ class BytecodeBuilder:
         self.cur_ns.extend(self._expr_bc(stmt.lineno, stmt.count))
         self.cur_ns.append((stmt.lineno, Bytecode.STORE, ('цел', (str(i),))))
         self.cur_ns.extend(self._loop_with_count_cond(stmt.lineno, str(i)))
-        self.cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG_IF_FALSE, (self.tags[i][2],)))
+        self.cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG_IF_FALSE, (self.tags[i][1],)))
         self.cur_inst_n += 2
         self.cur_tags.append(self.cur_inst_n)
 
@@ -137,8 +137,7 @@ class BytecodeBuilder:
         self.cur_tags.append(self.cur_inst_n)
         self.cur_ns.extend(self._loop_with_count_cond(stmt.lineno,
                                                       str(self.loops_with_count_indexes.pop())))
-        self.cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG_IF_FALSE, (stmt_tags[2],)))
-        self.cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG, (stmt_tags[0],)))
+        self.cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG_IF_TRUE, (stmt_tags[0],)))
         self.cur_inst_n += 2
         self.cur_tags.append(self.cur_inst_n)
 
@@ -146,7 +145,7 @@ class BytecodeBuilder:
         self.loops_while_stmts.append(stmt.cond)
         self.loops_while_indexes.append(i)
         self.cur_ns.extend(self._expr_bc(stmt.lineno, stmt.cond))
-        self.cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG_IF_FALSE, (self.tags[i][2],)))
+        self.cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG_IF_FALSE, (self.tags[i][1],)))
         self.cur_inst_n += 1
         self.cur_tags.append(self.cur_inst_n)
 
@@ -154,8 +153,7 @@ class BytecodeBuilder:
         stmt_tags = self.tags[self.loops_while_indexes.pop()]
         self.cur_tags.append(self.cur_inst_n)
         self.cur_ns.extend(self._expr_bc(stmt.lineno, self.loops_while_stmts.pop()))
-        self.cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG_IF_FALSE, (stmt_tags[2],)))
-        self.cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG, (stmt_tags[0],)))
+        self.cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG_IF_TRUE, (stmt_tags[0],)))
         self.cur_inst_n += 2
         self.cur_tags.append(self.cur_inst_n)
 
@@ -167,7 +165,7 @@ class BytecodeBuilder:
         self.cur_ns.append((stmt.lineno, Bytecode.LOAD_NAME, (stmt.target,)))
         self.cur_ns.extend(self._expr_bc(stmt.lineno, stmt.to_expr))
         self.cur_ns.append((stmt.lineno, Bytecode.BIN_OP, ('<=',)))
-        self.cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG_IF_FALSE, (self.tags[i][2],)))
+        self.cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG_IF_FALSE, (self.tags[i][1],)))
         self.cur_inst_n += 4
         self.cur_tags.append(self.cur_inst_n)
 
@@ -177,8 +175,7 @@ class BytecodeBuilder:
         self.cur_tags.append(self.cur_inst_n)
         self.cur_ns.extend(self._expr_bc(stmt.lineno, loop[1]))
         self.cur_ns.extend(self._loop_for_cond(stmt.lineno, loop[0], loop[2], loop[3]))
-        self.cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG_IF_FALSE, (stmt_tags[2],)))
-        self.cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG, (stmt_tags[0],)))
+        self.cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG_IF_TRUE, (stmt_tags[0],)))
         self.cur_inst_n += 2
         self.cur_tags.append(self.cur_inst_n)
 
@@ -273,11 +270,8 @@ def _get_all_statements_tags(parsed: list[Statement]) -> dict[int, list[int]]:
         elif isinstance(stmt, IfEnd):
             res[ifs.pop()].append(cur_tag_n)
             cur_tag_n += 1
-        elif isinstance(stmt, (LoopWithCountEnd, LoopWhileEnd, LoopForEnd)):
-            res[loops.pop()].extend((cur_tag_n, cur_tag_n+1))
-            cur_tag_n += 2
-        elif isinstance(stmt, LoopUntilEnd):
-            res[loops.pop()].append(cur_tag_n)  # нужна для команды `выход`
+        elif isinstance(stmt, (LoopWithCountEnd, LoopWhileEnd, LoopForEnd, LoopUntilEnd)):
+            res[loops.pop()].append(cur_tag_n)
             cur_tag_n += 1
 
     return res
