@@ -23,6 +23,8 @@ class Env(Enum):
     LOOP_FOR = auto()
     LOOP_UNTIL = auto()
 
+    SWITCH = auto()
+
 
 LOOP_ENVS = {Env.LOOP_WITH_COUNT, Env.LOOP_WHILE, Env.LOOP_FOR, Env.LOOP_UNTIL}
 
@@ -36,6 +38,9 @@ class Parser:
         self.line = 0
         self.cur_cls: Statement | None = None
         self.res: list[Statement] = []
+
+        # Кол-во веток `при` в текущей конструкции `выбор`
+        self.switch_cases_n = 0
 
         self._was_alg = False
 
@@ -150,6 +155,14 @@ class Parser:
             self.res.append(LoopForEnd(self.line))
         elif self.cur_token.value == 'кц' and self.envs[-1] == Env.LOOP_UNTIL:
             self._handle_loop_until_end()
+        elif self.cur_token.value == 'выбор' and Env.INTRODUCTION not in self.envs:
+            self.envs.append(Env.SWITCH)
+        elif self.cur_token.value == 'при' and self.envs[-1] == Env.SWITCH:
+            self._handle_switch_case()
+        elif self.cur_token.value == 'иначе' and self.envs[-1] == Env.SWITCH:
+            self._handle_switch_else()
+        elif self.cur_token.value == 'все' and self.envs[-1] == Env.SWITCH:
+            self._handle_switch_end()
         elif self.cur_token.kind == 'NAME':
             name = self.cur_token.value
             self._next_token()
@@ -317,6 +330,34 @@ class Parser:
 
         self.envs.pop()
         self.res.append(LoopUntilEnd(self.line - 1, cond))
+
+    def _handle_switch_case(self):
+        self._next_token()
+
+        cond = self._parse_expr()
+        if self.cur_token.value != ':':
+            raise SyntaxException(self.line, self.cur_token.value)
+
+        if self.switch_cases_n > 0:
+            self.res.append(ElseStart(self.line))
+        self.switch_cases_n += 1
+
+        self.res.append(IfStart(self.line, cond))
+
+    def _handle_switch_else(self):
+        self._next_token()
+
+        if self.cur_token.value != ':':
+            raise SyntaxException(self.line, self.cur_token.value)
+
+        self.res.append(ElseStart(self.line))
+
+    def _handle_switch_end(self):
+        for _ in range(self.switch_cases_n):
+            self.res.append(IfEnd(self.line))
+
+        self.switch_cases_n = 0
+        self.envs.pop()
 
     def _parse_expr(self) -> list[Value | Op]:
         expr = []

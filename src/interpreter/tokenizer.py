@@ -16,6 +16,7 @@ TOKEN_SPECIFICATION = [
     ('NAME',          r'[A-Za-zА-Яа-я_][A-Za-zА-Яа-я_0-9]*'),
     ('ASSIGN',        r':='),
     ('EQ',            r'='),
+    ('COLON',         r':'),
     ('COMMA',         r','),
     ('NEWLINE',       r'[\n;]'),
     ('SKIP',          r'[ \t]+'),
