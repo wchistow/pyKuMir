@@ -44,7 +44,7 @@ class Parser:
 
     def _next_token(self) -> None:
         self.cur_token = next(self.tokens)
-        if self.cur_token.kind == 'NEWLINE':
+        if self.cur_token.kind == 'NEWLINE' and self.cur_token.value == '\n':
             self.line += 1
 
         if self.debug:

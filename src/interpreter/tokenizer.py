@@ -17,7 +17,7 @@ TOKEN_SPECIFICATION = [
     ('ASSIGN',        r':='),
     ('EQ',            r'='),
     ('COMMA',         r','),
-    ('NEWLINE',       r'\n'),
+    ('NEWLINE',       r'[\n;]'),
     ('SKIP',          r'[ \t]+'),
     ('OTHER',         r'.'),
 ]
