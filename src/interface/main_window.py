@@ -86,12 +86,14 @@ class MainWindow(QWidget):
         run_button.clicked.connect(self.run_code)
         self.buttons.addWidget(run_button)
 
-    def closeEvent(self, a0):
+    def closeEvent(self, event):
         if self.unsaved_changes:
-            self.ask_to_save_or_close('Закрытие текста')
+            if self.ask_to_save_or_close('Закрытие текста') == 'reject_close':
+                event.ignore()
+                return
         if self.runner_thread is not None:
             self.runner_thread.join()
-        super().closeEvent(a0)
+        event.accept()
 
     def new_unsaved_changes(self):
         self.unsaved_changes = True
@@ -116,7 +118,7 @@ class MainWindow(QWidget):
         ask_window.setText('В этом файле были проведены несохранённые изменения.\n'
                            'При закрытии эти изменения будут потеряны.\nСохранить их?')
 
-        ask_window.addButton('Отменить закрытие', QMessageBox.ButtonRole.RejectRole)
+        reject_button = ask_window.addButton('Отменить закрытие', QMessageBox.ButtonRole.RejectRole)
         no_save_button = ask_window.addButton('Не сохранять', QMessageBox.ButtonRole.NoRole)
         save_button = ask_window.addButton('Сохранить', QMessageBox.ButtonRole.YesRole)
         ask_window.setDefaultButton(save_button)
@@ -127,6 +129,8 @@ class MainWindow(QWidget):
             self.save_file()
             self.unsaved_changes = False
             self.update_title()
+        elif ask_window.clickedButton() == reject_button:
+            return 'reject_close'
         elif ask_window.clickedButton() == no_save_button:
             self.cur_file = None
             self.codeinput.clear()
