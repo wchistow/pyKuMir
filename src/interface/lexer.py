@@ -43,8 +43,11 @@ class KuMirLexer(RegexLexer):
 
 
 def highlight_text(text: str) -> str:
-    return f'{CSS}<pre>{highlight(text, KuMirLexer(), HtmlFormatter(lineseparator="<br />"))[:-1]}</pre>'
+    return CSS + highlight_text_without_css(text)
 
+
+def highlight_text_without_css(text: str) -> str:
+    return f'<pre>{highlight(text, KuMirLexer(), HtmlFormatter(lineseparator="<br/>"))[:-1]}</pre>'
 
 if __name__ == '__main__':
     code = 'алг\nнач\n  цел а := 1+2\nкон'

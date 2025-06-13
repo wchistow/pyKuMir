@@ -1,10 +1,12 @@
 import os
-from re import match, sub
+import re
 from pathlib import Path
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (QWidget, QSplitter, QGridLayout,
                              QTreeWidget, QTreeWidgetItem, QTextBrowser)
+
+from .lexer import CSS, highlight_text_without_css
 
 
 class DocView(QWidget):
@@ -31,7 +33,7 @@ class DocView(QWidget):
 
         self.base_dir = Path(__file__).parent.parent.parent
         with open(os.path.join(self.base_dir, 'docs', 'lang', 'README.md')) as f:
-            self.view.setMarkdown(_links_from_relative_to_absolute(f.read(), self.base_dir))
+            self.view.setHtml(_prepare(f.read(), self.base_dir))
 
         self.view.anchorClicked.connect(self.update_selected_item)
 
@@ -62,7 +64,7 @@ class DocView(QWidget):
                 os.path.join(self.base_dir, 'docs',
                              self.tree.selectedItems()[0].data(1, 0))
         ) as f:
-            self.view.setMarkdown(_links_from_relative_to_absolute(f.read(), self.base_dir))
+            self.view.setHtml(_prepare(f.read(), self.base_dir))
 
     def update_selected_item(self, new_file):
         new_file_path = new_file.path()
@@ -78,14 +80,24 @@ def _get_all_files(root: str) -> list[str]:
     regex = os.path.join('.*', 'docs', '(.*)')
     for item in os.listdir(root):
         if not os.path.isdir(os.path.join(root, item)):
-            result.append(match(regex, os.path.join(root, item)).groups()[0])
+            result.append(re.match(regex, os.path.join(root, item)).groups()[0])
         else:
             result += _get_all_files(os.path.join(root, item))
 
     return result
 
 
+def _prepare(text: str, base_dir: Path) -> str:
+    text = CSS + '\n' + re.sub(r'```kumir\n(?P<code>[^`]+)```', _highlight, text.strip())
+    text = re.sub(r'```\n(?P<code>[^`]+)```', r'<code><pre>\g<code></pre></code>', text)
+    return _links_from_relative_to_absolute(text, base_dir)
+
+
+def _highlight(m: re.Match[str]) -> str:
+    return highlight_text_without_css(m.group(1))
+
+
 def _links_from_relative_to_absolute(text: str, base_dir: Path) -> str:
-    return sub(r'\./(?P<filename>[a-z_]+\.md)',
+    return re.sub(r'\./(?P<filename>[a-z_]+\.md)',
                rf'file://{os.path.join(base_dir, "docs", "lang")}'
                rf'{os.path.sep}\g<filename>', text)
