@@ -17,7 +17,11 @@ class BytecodeBuilder:
     """Преобразует АСД в байт-код."""
     def __init__(self) -> None:
         self.bytecode: list[BytecodeType] = []
-        self.algs: dict[str, list[list[BytecodeType], list[int]]] = {}
+        self.algs: dict[str,
+                        tuple[
+                            list[tuple[str, str, str]],
+                            list[list[BytecodeType],list[int]]
+                        ]] = {}
         self.cur_tags: list[int] = []
         self.cur_alg: str | None = None
         self.cur_inst_n = 0
@@ -61,14 +65,14 @@ class BytecodeBuilder:
 
         for i, stmt in enumerate(parsed_code):
             if self.cur_alg is not None:
-                self.cur_ns = self.algs[self.cur_alg][0]
+                self.cur_ns = self.algs[self.cur_alg][1][0]
             else:
                 self.cur_ns = self.bytecode
 
             self.HANDLERS[type(stmt)](stmt, i)
 
         if self.main_alg is not None:
-            self.bytecode.append((self.last_line, Bytecode.CALL, (self.main_alg,)))
+            self.bytecode.append((self.last_line, Bytecode.CALL, (self.main_alg, 0)))
 
         return self.bytecode, self.algs
 
@@ -92,7 +96,7 @@ class BytecodeBuilder:
         self.cur_inst_n += 1
 
     def _handle_alg_start(self, stmt: AlgStart, i: int) -> None:
-        self.algs[stmt.name] = [[], []]
+        self.algs[stmt.name] = (stmt.args, [[], []])
         self.cur_alg = stmt.name
         if stmt.is_main:
             self.main_alg = stmt.name
@@ -101,12 +105,14 @@ class BytecodeBuilder:
     def _handle_alg_end(self, stmt: AlgEnd, i: int) -> None:
         self.cur_ns.append((stmt.lineno, Bytecode.RET, ()))
         self.cur_inst_n += 1
-        self.algs[self.cur_alg][1] = self.cur_tags[:]
+        self.algs[self.cur_alg][1][1] = self.cur_tags[:]
         self.cur_tags.clear()
         self.cur_alg = None
 
     def _handle_call(self, stmt: Call, i: int) -> None:
-        self.cur_ns.append((stmt.lineno, Bytecode.CALL, (stmt.alg_name,)))
+        for arg in stmt.args:
+            self.cur_ns.extend(self._expr_bc(stmt.lineno, arg))
+        self.cur_ns.append((stmt.lineno, Bytecode.CALL, (stmt.alg_name, len(stmt.args))))
         self.cur_inst_n += 1
 
     def _handle_if_start(self, stmt: IfStart, i: int) -> None:

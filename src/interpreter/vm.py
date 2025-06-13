@@ -40,7 +40,7 @@ class VM:
             Bytecode.STORE: lambda inst: self.store_var(inst[0], inst[2][0], inst[2][1]),
             Bytecode.OUTPUT: lambda inst: self.output(inst[2][0]),
             Bytecode.INPUT: lambda inst: self.input(inst[0], inst[2]),
-            Bytecode.CALL: lambda inst: self.call(inst[0], inst[2][0]),
+            Bytecode.CALL: lambda inst: self.call(inst[0], inst[2][0], inst[2][1]),
             Bytecode.RET: lambda inst: self.call_stack.pop(),
             Bytecode.JUMP_TAG: lambda inst: self.jump_tag(inst[2][0]),
             Bytecode.JUMP_TAG_IF_FALSE: lambda inst: self.jump_tag_if_false(inst[0], inst[2][0]),
@@ -173,18 +173,20 @@ class VM:
                                    _convert_string_to_type(lineno, text, var_type))
                     cur_target_i += 1
 
-    def call(self, lineno: int, name: str) -> None:
+    def call(self, lineno: int, name: str, args_n: int) -> None:
         """
         Обрабатывает инструкцию CALL
         :param lineno: номер текущей строки кода
         :param name: имя алгоритма, который нужно вызвать
+        :param args_n: кол-во аргументов
         """
         if name in self.algs:
+            args = self.algs[name][0]
             self.in_alg = True
-            self.call_stack.append({})
-            self.cur_tags = self.algs[name][1]
+            self.call_stack.append(self._load_args(lineno, args, args_n))
+            self.cur_tags = self.algs[name][1][1]
             self.cur_inst_n = 0
-            self._execute(self.algs[name][0])
+            self._execute(self.algs[name][1][0])
         else:
             raise RuntimeException(lineno, f'имя {name} не определено')
 
@@ -208,6 +210,15 @@ class VM:
             self.jump_tag(tag)
         else:
             self.cur_inst_n += 1
+
+    def _load_args(self, lineno: int, args: list[tuple[str, str, str]], n: int) -> Namespace:
+        res: Namespace = {}
+        args_values = [self.stack.pop() for _ in range(n)][::-1]
+        for arg, value in zip(args, args_values):
+            if arg[1] != value.typename:
+                raise RuntimeException(lineno, 'Неправильный тип аргумента')
+            res[arg[2]] = (arg[1], value)
+        return res
 
     def _save_var(self, lineno: int, typename: str, name: str, value: Value | None) -> None:
         """
@@ -237,7 +248,7 @@ class VM:
         var = _find_var_in_namespace(lineno, name, self._get_all_namespaces())
         if var is not None:
             return var
-        raise RuntimeException(lineno, 'имя не объявлено')
+        raise RuntimeException(lineno, f'имя не объявлено: {name}')
 
     def _var_defined(self, name: str) -> bool:
         """

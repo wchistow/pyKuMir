@@ -108,23 +108,60 @@ class Parser:
             alg_name = ''
             start_line = self.line - 1
         elif self.cur_token.value == 'нач':
-            self.res.append(AlgStart(self.line, is_main=is_main, name=''))
+            self.res.append(AlgStart(self.line, is_main=is_main, name='', args=[]))
             return
         else:
             raise SyntaxException(self.line, self.cur_token.value)
         self._next_token()
 
-        while self.cur_token.kind == 'NEWLINE':
-            self._next_token()
-        if self.cur_token.value != 'нач':
+        args = []
+        if self.cur_token.value == '(':
+            args = self._handle_alg_args()
+        elif self.cur_token.kind == 'NEWLINE':
+            args = []
+        elif self.cur_token.value != 'нач':
             raise SyntaxException(self.line, self.cur_token.value)
+        else:
+            while self.cur_token.kind == 'NEWLINE':
+                self._next_token()
+            if self.cur_token.value != 'нач':
+                raise SyntaxException(self.line, self.cur_token.value)
         if not alg_name and self._was_alg:
             raise SyntaxException(self.line, self.cur_token.value,
                                   'не указано имя алгоритма')
 
         self._next_token()
 
-        self.res.append(AlgStart(start_line, is_main=is_main, name=alg_name))
+        self.res.append(AlgStart(start_line, is_main=is_main, name=alg_name, args=args))
+
+    def _handle_alg_args(self) -> list:
+        self._next_token()
+        args = [self._parse_arg()]
+        while self.cur_token.kind == 'COMMA':
+            self._next_token()
+            args.append(self._parse_arg())
+        return args
+
+    def _parse_arg(self) -> tuple[str, str, str]:
+        if self.cur_token.value != 'арг':
+            raise SyntaxException(self.line, self.cur_token.value)
+        else:
+            kind = self.cur_token.value
+        self._next_token()
+
+        if self.cur_token.kind != 'TYPE':
+            raise SyntaxException(self.line, self.cur_token.value)
+        else:
+            typename = self.cur_token.value
+        self._next_token()
+
+        if self.cur_token.kind != 'NAME':
+            raise SyntaxException(self.line, self.cur_token.value)
+        else:
+            name = self.cur_token.value
+        self._next_token()
+
+        return kind, typename, name
 
     def _handle_statement(self) -> None:
         if self.cur_token.kind == 'TYPE':  # объявление переменной(ых)
@@ -170,6 +207,8 @@ class Parser:
                 self._handle_var_assign(name)
             elif self.cur_token.kind == 'NEWLINE':  # вызов процедуры
                 self.res.append(Call(self.line - 1, name))
+            elif self.cur_token.value == '(':  # вызов с аргументами
+                self._handle_call(name)
             else:
                 raise SyntaxException(self.line, self.cur_token.value)
         elif self.cur_token.kind != 'NEWLINE':
@@ -358,6 +397,24 @@ class Parser:
 
         self.switch_cases_n = 0
         self.envs.pop()
+
+    def _handle_call(self, name: str):
+        self._next_token()
+        args = [self._parse_expr()]
+
+        while self.cur_token.kind == 'COMMA':
+            self._next_token()
+            args.append(self._parse_expr())
+
+        if args[-1][-1] == Op(op=')'):
+            args[-1] = args[-1][:-1]
+        else:
+            raise SyntaxException(self.line, args[-1][-1].value)
+
+        if self.cur_token.kind != 'NEWLINE':
+            raise SyntaxException(self.line, self.cur_token.value)
+
+        self.res.append(Call(self.line - 1, name, args))
 
     def _parse_expr(self) -> list[Value | Op]:
         expr = []

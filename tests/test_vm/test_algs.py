@@ -61,6 +61,19 @@ def test_exit_in_alg():
     vm.execute()
     assert print_mock.printed_text == '1'
 
+def test_call_alg_with_args():
+    bytecode = code2bc('''
+    алг нач
+        сумма(1, 2)
+    кон
+
+    алг сумма(арг цел а, арг цел б) нач
+        вывод а + б
+    кон''')
+    vm = create_vm(*bytecode)
+    vm.execute()
+    assert print_mock.printed_text == '3'
+
 def test_call_undef_alg_error():
     bytecode = code2bc('алг\nнач\nтест\nкон')
     vm = create_vm(*bytecode)

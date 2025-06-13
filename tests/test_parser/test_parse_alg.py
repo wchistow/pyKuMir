@@ -9,7 +9,8 @@ PATH_TO_SRC = Path(__file__).parent.parent.parent.absolute() / 'src'
 sys.path.append(str(PATH_TO_SRC.absolute()))
 
 interpreter = importlib.import_module('interpreter')
-Parser, SyntaxException, Value = interpreter.Parser, interpreter.SyntaxException, interpreter.value.Value
+Parser, SyntaxException, Value = (interpreter.Parser, interpreter.SyntaxException,
+                                  interpreter.value.Value)
 ast_classes = interpreter.ast_classes
 
 
@@ -52,26 +53,48 @@ def test_parse_two_algs():
         ast_classes.AlgEnd(6)
     ]
 
-def test_parse_call():
-    code = '''алг
-    нач
-        приветствие
-    кон
-    
-    алг приветствие
-    нач
-        вывод "привет"
+def test_parse_alg_with_args():
+    code = '''
+    алг тест(арг цел а, арг цел б) нач
+        вывод а, б
     кон
     '''
     parser = Parser(code)
     parsed = parser.parse()
     assert parsed == [
-        ast_classes.AlgStart(0, is_main=True, name=''),
+        ast_classes.AlgStart(lineno=1, is_main=True, name='тест',
+                             args=[('арг', 'цел', 'а'), ('арг', 'цел', 'б')]),
+        ast_classes.Output(lineno=2, exprs=[[Value(typename='get-name', value='а')],
+                                            [Value(typename='get-name', value='б')]]),
+        ast_classes.AlgEnd(lineno=3)
+    ]
+
+def test_parse_call():
+    code = '''
+    алг нач
+        приветствие
+    кон
+    '''
+    parser = Parser(code)
+    parsed = parser.parse()
+    assert parsed == [
+        ast_classes.AlgStart(1, is_main=True, name=''),
         ast_classes.Call(2, alg_name='приветствие'),
-        ast_classes.AlgEnd(3),
-        ast_classes.AlgStart(5, is_main=False, name='приветствие'),
-        ast_classes.Output(7, exprs=[[Value('лит', 'привет')]]),
-        ast_classes.AlgEnd(8)
+        ast_classes.AlgEnd(3)
+    ]
+
+def test_parse_call_with_args():
+    code = '''
+    алг нач
+        тест(1, 2)
+    кон
+    '''
+    parser = Parser(code)
+    parsed = parser.parse()
+    assert parsed == [
+        ast_classes.AlgStart(1, is_main=True, name=''),
+        ast_classes.Call(2, alg_name='тест', args=[[Value('цел', 1)], [Value('цел', 2)]]),
+        ast_classes.AlgEnd(3)
     ]
 
 def test_parse_alg_with_space_in_name():
