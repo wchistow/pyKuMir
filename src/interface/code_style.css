@@ -1,0 +1,23 @@
+/* Ключевые слова */
+.k {
+    font-weight: bold;
+}
+
+/* Типы */
+.kt {
+    font-weight: bold;
+    color: #C05800
+}
+
+/* Строки и числа */
+.s, .m {
+    font-weight: bold;
+    color: #0095FF;
+}
+
+/* Комментарии */
+.c {
+    font-weight: bold;
+    font-style: italic;
+    color: #888888;
+}

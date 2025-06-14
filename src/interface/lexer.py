@@ -1,3 +1,5 @@
+import os.path
+
 from pygments import highlight
 from pygments.formatters import HtmlFormatter
 from pygments.lexer import RegexLexer, words
@@ -5,25 +7,8 @@ from pygments.token import Comment, Keyword, Number, Text, String
 
 from interpreter.constants import KEYWORDS, TYPES
 
-CSS = '''<style>
-/* Ключевые слова */
-.k {
-    font-weight: bold;
-}
-
-/* Строки и числа */
-.s, .m {
-    font-weight: bold;
-    color: blue;
-}
-
-/* Комментарии */
-.c {
-    font-weight: bold;
-    font-style: italic;
-    color: grey;
-}
-</style>'''
+with open(os.path.join(os.path.dirname(__file__), 'code_style.css')) as f:
+    CSS = f'<style>\n{f.read()}\n</style>'
 
 
 class KuMirLexer(RegexLexer):
@@ -31,12 +16,10 @@ class KuMirLexer(RegexLexer):
 
     tokens = {
         'root': [
-            (words(TYPES, suffix=r'\b'), Keyword),
+            (words(TYPES, suffix=r'\b'), Keyword.Type),
             (words(KEYWORDS, suffix=r'\b'), Keyword),
-            (r'".*"', String),
+            (r'"[^"\n]*"', String),
             (r'\b\d+', Number),
-            (r'\w+', Text),
-            (r'\s+', Text),
             (r'\|.*', Comment),
         ]
     }
