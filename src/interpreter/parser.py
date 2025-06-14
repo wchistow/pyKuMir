@@ -108,7 +108,7 @@ class Parser:
             alg_name = ''
             start_line = self.line - 1
         elif self.cur_token.value == 'нач':
-            self.res.append(AlgStart(self.line, is_main=is_main, name='', args=[]))
+            self.res.append(AlgStart(self.line, is_main=is_main, name=''))
             return
         else:
             raise SyntaxException(self.line, self.cur_token.value)

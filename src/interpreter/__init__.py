@@ -21,7 +21,7 @@ def pretty_print_bc(bc: list[BytecodeType], algs: dict) -> None:
     ```
     Пример:
     ```
-    1  LOAD            (2,)
+     1  LOAD_CONST           (Value(typename='цел', value=2),)
     ```
     """
     for inst in bc:

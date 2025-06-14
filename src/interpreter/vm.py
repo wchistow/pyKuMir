@@ -156,7 +156,7 @@ class VM:
             try:
                 target_var = self._get_all_namespaces()[target]
             except KeyError:
-                raise RuntimeException(lineno, 'имя не объявлено') from None
+                raise RuntimeException(lineno, f'имя "{target}" не объявлено') from None
             target_var_type = target_var[0]
             if target_var_type == 'лит':
                 self._save_var(lineno, target_var_type, target,
@@ -188,7 +188,7 @@ class VM:
             self.cur_inst_n = 0
             self._execute(self.algs[name][1][0])
         else:
-            raise RuntimeException(lineno, f'имя {name} не определено')
+            raise RuntimeException(lineno, f'имя "{name}" не определено')
 
     def jump_tag(self, tag: int) -> None:
         self.cur_inst_n = self.cur_tags[tag]
@@ -216,7 +216,7 @@ class VM:
         args_values = [self.stack.pop() for _ in range(n)][::-1]
         for arg, value in zip(args, args_values):
             if arg[1] != value.typename:
-                raise RuntimeException(lineno, 'Неправильный тип аргумента')
+                raise RuntimeException(lineno, 'неправильный тип аргумента')
             res[arg[2]] = (arg[1], value)
         return res
 
@@ -248,7 +248,7 @@ class VM:
         var = _find_var_in_namespace(lineno, name, self._get_all_namespaces())
         if var is not None:
             return var
-        raise RuntimeException(lineno, f'имя не объявлено: {name}')
+        raise RuntimeException(lineno, f'имя "{name}" не объявлено')
 
     def _var_defined(self, name: str) -> bool:
         """
@@ -286,19 +286,19 @@ def _convert_string_to_type(lineno: int, string: str, var_type: str) -> Value:
         try:
             return Value('цел', int(string))
         except ValueError:
-            raise RuntimeException(lineno, 'Ошибка ввода целого числа') from None
+            raise RuntimeException(lineno, 'ошибка ввода целого числа') from None
     elif var_type == 'вещ':
         try:
             return Value('вещ', float(string))
         except ValueError:
-            raise RuntimeException(lineno, 'Ошибка ввода вещественного числа') from None
+            raise RuntimeException(lineno, 'ошибка ввода вещественного числа') from None
     elif var_type == 'лог':
         return Value('лог', string)
     elif var_type == 'лит':
         return Value('лит', string)
     elif var_type == 'сим':
         if len(string) > 1:
-            raise RuntimeException(lineno, 'Ошибка ввода: введено лишнее')
+            raise RuntimeException(lineno, 'ошибка ввода: введено лишнее')
         return Value('сим', string)
 
 
