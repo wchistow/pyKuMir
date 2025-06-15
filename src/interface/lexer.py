@@ -2,8 +2,8 @@ import os.path
 
 from pygments import highlight
 from pygments.formatters import HtmlFormatter
-from pygments.lexer import RegexLexer, words
-from pygments.token import Comment, Keyword, Number, Text, String
+from pygments.lexer import RegexLexer, words, bygroups
+from pygments.token import Comment, Keyword, Number, String, Name, Whitespace, Punctuation
 
 from interpreter.constants import KEYWORDS, TYPES
 
@@ -16,8 +16,12 @@ class KuMirLexer(RegexLexer):
 
     tokens = {
         'root': [
-            (words(TYPES, suffix=r'\b'), Keyword.Type),
-            (words(KEYWORDS, suffix=r'\b'), Keyword),
+            (words(TYPES, prefix=r'\b', suffix=r'\b'), Keyword.Type),
+            (words(KEYWORDS, prefix=r'\b', suffix=r'\b'), Keyword),
+            (
+                r'(\w+)(\s*)(\()',
+                bygroups(Name.Function, Whitespace, Punctuation)
+            ),
             (r'"[^"\n]*"', String),
             (r'\b\d+', Number),
             (r'\|.*', Comment),
@@ -32,8 +36,12 @@ def highlight_text(text: str) -> str:
 def highlight_text_without_css(text: str) -> str:
     return f'<pre>{highlight(text, KuMirLexer(), HtmlFormatter(lineseparator="<br/>"))[:-1]}</pre>'
 
+
 if __name__ == '__main__':
-    code = 'алг\nнач\n  цел а := 1+2\nкон'
+    code = '''
+    алг fib(арг цел n) нач
+        вывод n
+    кон'''
 
     print(repr(highlight_text(code)))
     # lexer = KuMirLexer()
