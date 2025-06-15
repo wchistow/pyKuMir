@@ -20,6 +20,7 @@ class BytecodeBuilder:
         self.algs: dict[str,
                         tuple[
                             list[tuple[str, str, str]],
+                            str, str,
                             list[list[BytecodeType],list[int]]
                         ]] = {}
         self.cur_tags: list[int] = []
@@ -65,7 +66,7 @@ class BytecodeBuilder:
 
         for i, stmt in enumerate(parsed_code):
             if self.cur_alg is not None:
-                self.cur_ns = self.algs[self.cur_alg][1][0]
+                self.cur_ns = self.algs[self.cur_alg][3][0]
             else:
                 self.cur_ns = self.bytecode
 
@@ -96,7 +97,7 @@ class BytecodeBuilder:
         self.cur_inst_n += 1
 
     def _handle_alg_start(self, stmt: AlgStart, i: int) -> None:
-        self.algs[stmt.name] = (stmt.args, [[], []])
+        self.algs[stmt.name] = (stmt.args, stmt.ret_type, stmt.ret_name, [[], []])
         self.cur_alg = stmt.name
         if stmt.is_main:
             self.main_alg = stmt.name
@@ -105,7 +106,7 @@ class BytecodeBuilder:
     def _handle_alg_end(self, stmt: AlgEnd, i: int) -> None:
         self.cur_ns.append((stmt.lineno, Bytecode.RET, ()))
         self.cur_inst_n += 1
-        self.algs[self.cur_alg][1][1] = self.cur_tags[:]
+        self.algs[self.cur_alg][3][1] = self.cur_tags[:]
         self.cur_tags.clear()
         self.cur_alg = None
 
@@ -243,6 +244,9 @@ class BytecodeBuilder:
         for v in expr:
             if isinstance(v, Op):
                 res.append((lineno, Bytecode.BIN_OP, (v.op,)))
+            elif isinstance(v, Call):
+                self._handle_call(v, 0)
+                self.cur_inst_n -= 1
             elif v.typename == 'get-name':
                 res.append((lineno, Bytecode.LOAD_NAME, (v.value,)))
             elif isinstance(v, Value):

@@ -63,7 +63,7 @@ def test_parse_alg_with_args():
     parsed = parser.parse()
     assert parsed == [
         ast_classes.AlgStart(lineno=1, is_main=True, name='тест',
-                             args=[('арг', 'цел', 'а'), ('арг', 'цел', 'б')]),
+                             args=[['арг', 'цел', 'а'], ['арг', 'цел', 'б']]),
         ast_classes.Output(lineno=2, exprs=[[Value(typename='get-name', value='а')],
                                             [Value(typename='get-name', value='б')]]),
         ast_classes.AlgEnd(lineno=3)
@@ -96,6 +96,42 @@ def test_parse_call_with_args():
         ast_classes.Call(2, alg_name='тест', args=[[Value('цел', 1)], [Value('цел', 2)]]),
         ast_classes.AlgEnd(3)
     ]
+
+def test_parse_call_with_args_as_expr():
+    code = '''
+    алг нач
+        вывод тест(1, 2)
+    кон
+    '''
+    parser = Parser(code)
+    parsed = parser.parse()
+    assert parsed == [
+        ast_classes.AlgStart(1, is_main=True, name=''),
+        ast_classes.Output(lineno=2,
+                           exprs=[[ast_classes.Call(lineno=2,
+                                                    alg_name='тест',
+                                                    args=[
+                                                        [Value(typename='цел', value=1)],
+                                                        [Value(typename='цел', value=2)]
+                                                    ])
+                                   ]]
+                           ),
+        ast_classes.AlgEnd(3)
+    ]
+
+def test_parse_alg_with_two_args_with_one_type():
+    code = '''
+    алг нач
+    кон
+
+    алг цел сумма(цел а, б) нач
+        знач := а + б
+    кон
+    '''
+    parser = Parser(code)
+    parsed = parser.parse()
+    assert ast_classes.AlgStart(4, is_main=False, name='сумма', ret_type='цел',
+                                args=[['арг', 'цел', 'а'], ['арг', 'цел', 'б']]) in parsed
 
 def test_parse_alg_with_space_in_name():
     code = '''алг один два

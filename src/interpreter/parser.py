@@ -101,6 +101,12 @@ class Parser:
     def _handle_alg_header(self, is_main: bool):
         self._next_token()
 
+        ret_name = 'знач'
+        ret_type = ''
+        if self.cur_token.kind == 'TYPE':
+            ret_type = self.cur_token.value
+            self._next_token()
+
         if self.cur_token.kind == 'NAME':
             alg_name = self.cur_token.value
             start_line = self.line
@@ -108,6 +114,9 @@ class Parser:
             alg_name = ''
             start_line = self.line - 1
         elif self.cur_token.value == 'нач':
+            if ret_type:
+                raise SyntaxException(self.line, self.cur_token.value,
+                                      'алгоритм без имени ничего не возвращает')
             self.res.append(AlgStart(self.line, is_main=is_main, name=''))
             return
         else:
@@ -116,7 +125,9 @@ class Parser:
 
         args = []
         if self.cur_token.value == '(':
-            args = self._handle_alg_args()
+            args, _ret_name, _ret_type = self._handle_alg_args()
+            ret_type = _ret_type or ret_type
+            ret_name = _ret_name or ret_name
         elif self.cur_token.kind == 'NEWLINE':
             args = []
         elif self.cur_token.value != 'нач':
@@ -129,31 +140,62 @@ class Parser:
         if not alg_name and self._was_alg:
             raise SyntaxException(self.line, self.cur_token.value,
                                   'не указано имя алгоритма')
+        if ret_type and not alg_name:
+            raise SyntaxException(self.line, self.cur_token.value,
+                                  'алгоритм без имени ничего не возвращает')
 
         self._next_token()
 
-        self.res.append(AlgStart(start_line, is_main=is_main, name=alg_name, args=args))
+        self.res.append(AlgStart(start_line, is_main=is_main, name=alg_name,
+                                 ret_type=ret_type, ret_name=ret_name, args=args))
 
-    def _handle_alg_args(self) -> list:
+    def _handle_alg_args(self) -> tuple[list, str, str]:
         self._next_token()
-        args = [self._parse_arg()]
+        ret_name = ''
+        ret_type = ''
+        last_kind = 'арг'
+        last_type = ''
+        arg = self._parse_arg()
+        arg = [arg[0] or last_kind, arg[1] or last_type, arg[2]]
+        args = []
+        if 'рез' in arg[0]:
+            ret_name = arg[2]
+            ret_type = arg[1]
+            if arg[0] == 'аргрез':
+                arg[0] = 'арг'
+                args.append(arg)
+        else:
+            args.append(arg)
+        last_kind = arg[0]
+        last_type = arg[1]
         while self.cur_token.kind == 'COMMA':
             self._next_token()
-            args.append(self._parse_arg())
-        return args
+            arg = self._parse_arg()
+            arg = [arg[0] or last_kind, arg[1] or last_type, arg[2]]
+            if 'рез' in arg[0]:
+                ret_name = arg[2]
+                ret_type = arg[1]
+                if arg[0] == 'аргрез':
+                    arg[0] = 'арг'
+                    args.append(arg)
+            else:
+                args.append(arg)
+            last_kind = arg[0]
+            last_type = arg[1]
+        return args, ret_name, ret_type
 
     def _parse_arg(self) -> tuple[str, str, str]:
-        if self.cur_token.value != 'арг':
-            raise SyntaxException(self.line, self.cur_token.value)
-        else:
+        if self.cur_token.value in ('арг', 'рез', 'аргрез'):
             kind = self.cur_token.value
-        self._next_token()
-
-        if self.cur_token.kind != 'TYPE':
-            raise SyntaxException(self.line, self.cur_token.value)
+            self._next_token()
         else:
+            kind = ''
+
+        if self.cur_token.kind == 'TYPE':
             typename = self.cur_token.value
-        self._next_token()
+            self._next_token()
+        else:
+            typename = ''
 
         if self.cur_token.kind != 'NAME':
             raise SyntaxException(self.line, self.cur_token.value)
@@ -399,32 +441,34 @@ class Parser:
         self.envs.pop()
 
     def _handle_call(self, name: str):
-        self._next_token()
-        args = [self._parse_expr()]
-
-        while self.cur_token.kind == 'COMMA':
-            self._next_token()
-            args.append(self._parse_expr())
-
-        if args[-1][-1] == Op(op=')'):
-            args[-1] = args[-1][:-1]
-        else:
-            raise SyntaxException(self.line, args[-1][-1].value)
+        call = self._parse_call(name)
 
         if self.cur_token.kind != 'NEWLINE':
             raise SyntaxException(self.line, self.cur_token.value)
 
-        self.res.append(Call(self.line - 1, name, args))
+        self.res.append(call)
 
-    def _parse_expr(self) -> list[Value | Op]:
+    def _parse_expr(self, in_alg_call=False) -> list[Value | Op]:
         expr = []
 
         # Переменные должны быть инициализированы разными значениями,
         # чтобы на первой итерации цикла не происходила ошибка
         last_kind = None
         cur_kind = ''
+        open_brackets = 0
+        close_brackets = 0
+
+        last_name = ''
         while (self.cur_token.kind in ('STRING', 'NAME', 'CHAR', 'NUMBER', 'OP', 'EQ') or
                self.cur_token.value in ('да', 'нет', 'нс')):
+            if self.cur_token.value == '(':
+                open_brackets += 1
+            elif self.cur_token.value == ')':
+                close_brackets += 1
+            if in_alg_call and close_brackets - open_brackets == 1:
+                self._next_token()
+                break
+
             if self.cur_token.kind in ('STRING', 'NAME', 'CHAR', 'NUMBER'):
                 cur_kind = 'val'
             elif self.cur_token.value not in ('(', ')'):
@@ -435,10 +479,27 @@ class Parser:
             if last_kind == cur_kind:
                 raise SyntaxException(self.line, self.cur_token.value)
 
-            expr.append(_get_val(self.cur_token.kind, self.cur_token.value))
+            if last_name and self.cur_token.value == '(':
+                expr.append(self._parse_call(last_name))
+                last_name = ''
+                continue
+
+            if last_name:
+                expr.append(_get_val('NAME', last_name))
+
+            if self.cur_token.kind != 'NAME':
+                expr.append(_get_val(self.cur_token.kind, self.cur_token.value))
+
+            if self.cur_token.kind == 'NEWLINE':
+                break
+
+            last_name = self.cur_token.value if self.cur_token.kind == 'NAME' else ''
+            last_kind = cur_kind
+
             self._next_token()
 
-            last_kind = cur_kind
+        if last_name:
+            expr.append(_get_val('NAME', last_name))
 
         if not expr:
             raise SyntaxException(self.line, self.cur_token.value)
@@ -450,6 +511,16 @@ class Parser:
         if self.cur_token.kind in ('STRING', 'NAME', 'CHAR', 'NUMBER'):
             return [_get_val(self.cur_token.kind, self.cur_token.value)]
         raise SyntaxException(self.line, self.cur_token.value)
+
+    def _parse_call(self, name: str) -> Call:
+        self._next_token()
+        args = [self._parse_expr(in_alg_call=True)]
+
+        while self.cur_token.kind == 'COMMA':
+            self._next_token()
+            args.append(self._parse_expr(in_alg_call=True))
+
+        return Call(self.line - 1, name, args)
 
 
 def _get_val(kind: str, value: str) -> Value | Op:

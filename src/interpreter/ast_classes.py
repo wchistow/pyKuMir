@@ -31,6 +31,8 @@ class Op:
 class AlgStart(Statement):
     is_main: bool
     name: str
+    ret_type: str = ''
+    ret_name: str = 'знач'
     args: list[tuple[str, str, str]] = field(default_factory=list)
 
 class AlgEnd(Statement):

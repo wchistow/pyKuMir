@@ -31,7 +31,9 @@ class VM:
         self.in_alg = False
 
         self.cur_tags: list[int] = []
-        self.cur_inst_n = 0
+
+        self.cur_algs: list[str] = []
+        self.cur_algs_inst_n: list[int] = [0]
 
         self.CALL_TRANSITIONS = {
             Bytecode.LOAD_CONST: lambda inst: self.stack.append(inst[2][0]),
@@ -41,7 +43,7 @@ class VM:
             Bytecode.OUTPUT: lambda inst: self.output(inst[2][0]),
             Bytecode.INPUT: lambda inst: self.input(inst[0], inst[2]),
             Bytecode.CALL: lambda inst: self.call(inst[0], inst[2][0], inst[2][1]),
-            Bytecode.RET: lambda inst: self.call_stack.pop(),
+            Bytecode.RET: lambda inst: self.ret(inst[0]),
             Bytecode.JUMP_TAG: lambda inst: self.jump_tag(inst[2][0]),
             Bytecode.JUMP_TAG_IF_FALSE: lambda inst: self.jump_tag_if_false(inst[0], inst[2][0]),
             Bytecode.JUMP_TAG_IF_TRUE: lambda inst: self.jump_tag_if_true(inst[0], inst[2][0])
@@ -54,13 +56,13 @@ class VM:
         self._execute(self.bytecode)
 
     def _execute(self, bc: list[BytecodeType]) -> None:
-        while self.cur_inst_n < len(bc):
-            inst = bc[self.cur_inst_n]
+        while self.cur_algs_inst_n[-1] < len(bc):
+            inst = bc[self.cur_algs_inst_n[-1]]
             self.CALL_TRANSITIONS[inst[1]](inst)
             if inst[1] == Bytecode.RET:
                 break
             if inst[1] not in self.INSTS_WITHOUT_INCREASE_COUNTER:
-                self.cur_inst_n += 1
+                self.cur_algs_inst_n[-1] += 1
 
     def store_var(self, lineno: int, typename: str | None, names: tuple[str]) -> None:
         """
@@ -181,17 +183,36 @@ class VM:
         :param args_n: кол-во аргументов
         """
         if name in self.algs:
-            args = self.algs[name][0]
-            self.in_alg = True
+            alg = self.algs[name]
+            args = alg[0]
             self.call_stack.append(self._load_args(lineno, args, args_n))
-            self.cur_tags = self.algs[name][1][1]
-            self.cur_inst_n = 0
-            self._execute(self.algs[name][1][0])
+            if alg[1]:  # ret_type
+                self.call_stack[-1][alg[2]] = (alg[1], None)
+
+            self.in_alg = True
+            self.cur_tags = alg[3][1]
+            self.cur_algs.append(name)
+            self.cur_algs_inst_n.append(0)
+            self._execute(alg[3][0])
         else:
             raise RuntimeException(lineno, f'имя "{name}" не определено')
 
+    def ret(self, lineno: int):
+        ret_type = self.algs[self.cur_algs[-1]][1]
+        ret_name = self.algs[self.cur_algs[-1]][2]
+        if ret_type:
+            ret_v = self.call_stack[-1][ret_name][1]
+            if ret_v is not None:
+                self.stack.append(ret_v)
+            else:
+                raise RuntimeException(lineno, 'функция должна возвращать значение')
+
+        self.cur_algs.pop()
+        self.cur_algs_inst_n.pop()
+        self.call_stack.pop()
+
     def jump_tag(self, tag: int) -> None:
-        self.cur_inst_n = self.cur_tags[tag]
+        self.cur_algs_inst_n[-1] = self.cur_tags[tag]
 
     def jump_tag_if_false(self, lineno: int, tag: int) -> None:
         cond = self.stack.pop()
@@ -200,7 +221,7 @@ class VM:
         if cond.value == 'нет':
             self.jump_tag(tag)
         else:
-            self.cur_inst_n += 1
+            self.cur_algs_inst_n[-1] += 1
 
     def jump_tag_if_true(self, lineno: int, tag: int) -> None:
         cond = self.stack.pop()
@@ -209,7 +230,7 @@ class VM:
         if cond.value == 'да':
             self.jump_tag(tag)
         else:
-            self.cur_inst_n += 1
+            self.cur_algs_inst_n[-1] += 1
 
     def _load_args(self, lineno: int, args: list[tuple[str, str, str]], n: int) -> Namespace:
         res: Namespace = {}
