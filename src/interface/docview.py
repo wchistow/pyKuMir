@@ -99,5 +99,5 @@ def _highlight(m: re.Match[str]) -> str:
 
 def _links_from_relative_to_absolute(text: str, base_dir: Path) -> str:
     return re.sub(r'\./(?P<filename>[a-z_]+\.md)',
-               rf'file://{os.path.join(base_dir, "docs", "lang")}'
+               rf'file://{re.escape(os.path.join(base_dir, "docs", "lang"))}'
                rf'{os.path.sep}\g<filename>', text)
