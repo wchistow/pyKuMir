@@ -157,13 +157,19 @@ class Parser:
         if arg is not None:
             args.append(arg)
             last_kind = arg[0]
+            if not arg[1]:
+                raise SyntaxException(self.line, self.cur_token.value, 'не указан тип')
             last_type = arg[1]
         while self.cur_token.kind == 'COMMA':
             arg, ret_type, ret_name = self._handle_arg(last_kind, last_type)
             if arg is not None:
                 args.append(arg)
                 last_kind = arg[0]
+                if not arg[1]:
+                    raise SyntaxException(self.line, self.cur_token.value, 'не указан тип')
                 last_type = arg[1]
+        if self.cur_token.value != ')':
+            raise SyntaxException(self.line, self.cur_token.value)
         return args, ret_name, ret_type
 
     def _handle_arg(self, last_kind: str, last_type: str) -> tuple[list[str] | None, str, str]:
