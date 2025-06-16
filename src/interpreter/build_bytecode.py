@@ -1,7 +1,7 @@
 from .ast_classes import (StoreVar, Output, Op, AlgStart, AlgEnd, Call,
                           Input, IfStart, IfEnd, ElseStart, LoopWithCountStart,
                           LoopWithCountEnd, LoopWhileStart, LoopWhileEnd, Statement, LoopForStart,
-                          LoopForEnd, Expr, LoopUntilStart, LoopUntilEnd, Exit)
+                          LoopForEnd, Expr, LoopUntilStart, LoopUntilEnd, Exit, Assert)
 from .bytecode import Bytecode, BytecodeType
 from .value import Value
 
@@ -58,7 +58,8 @@ class BytecodeBuilder:
             LoopForEnd: self._handle_loop_for_end,
             LoopUntilStart: self._handle_loop_until_start,
             LoopUntilEnd: self._handle_loop_until_end,
-            Exit: self._handle_exit
+            Exit: self._handle_exit,
+            Assert: self._handle_assert,
         }
 
     def build(self, parsed_code: list[Statement]) -> tuple[list[BytecodeType], dict]:
@@ -208,6 +209,11 @@ class BytecodeBuilder:
         else:
             self.cur_ns.append((stmt.lineno, Bytecode.RET, ()))
             self.cur_inst_n += 1
+
+    def _handle_assert(self, stmt: Assert, i: int) -> None:
+        self.cur_ns.extend(self._expr_bc(stmt.lineno, stmt.expr))
+        self.cur_ns.append((stmt.lineno, Bytecode.ASSERT, ()))
+        self.cur_inst_n += 1
 
     def _loop_with_count_cond(self, lineno: int, loop_name: str) -> list[BytecodeType]:
         res = [

@@ -46,7 +46,8 @@ class VM:
             Bytecode.RET: lambda inst: self.ret(inst[0]),
             Bytecode.JUMP_TAG: lambda inst: self.jump_tag(inst[2][0]),
             Bytecode.JUMP_TAG_IF_FALSE: lambda inst: self.jump_tag_if_false(inst[0], inst[2][0]),
-            Bytecode.JUMP_TAG_IF_TRUE: lambda inst: self.jump_tag_if_true(inst[0], inst[2][0])
+            Bytecode.JUMP_TAG_IF_TRUE: lambda inst: self.jump_tag_if_true(inst[0], inst[2][0]),
+            Bytecode.ASSERT: lambda inst: self.assert_(inst[0])
         }
 
         self.INSTS_WITHOUT_INCREASE_COUNTER = {Bytecode.JUMP_TAG, Bytecode.JUMP_TAG_IF_FALSE,
@@ -235,6 +236,13 @@ class VM:
             self.jump_tag(tag)
         else:
             self.cur_algs_inst_n[-1] += 1
+
+    def assert_(self, lineno: int) -> None:
+        cond = self.stack.pop()
+        if cond.typename != 'лог':
+            raise RuntimeException(lineno, 'условие не логическое')
+        if cond.value == 'нет':
+            raise RuntimeException(lineno, 'условие ложно')
 
     def _load_args(self, lineno: int, args: list[tuple[str, str, str]], n: int) -> Namespace:
         res: Namespace = {}

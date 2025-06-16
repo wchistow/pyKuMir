@@ -9,8 +9,14 @@ PATH_TO_SRC = Path(__file__).parent.parent.parent.absolute() / 'src'
 sys.path.append(str(PATH_TO_SRC.absolute()))
 
 interpreter = importlib.import_module('interpreter')
-Parser, SyntaxException = interpreter.Parser, interpreter.SyntaxException
+Parser, SyntaxException, ast_classes, Value = (interpreter.Parser, interpreter.SyntaxException,
+                                               interpreter.ast_classes, interpreter.value.Value)
 
+def test_parse_assert():
+    parser = Parser('утв да')
+    parsed = parser.parse()
+
+    assert parsed == [ast_classes.Assert(1, expr=[Value('лог', 'да')])]
 
 def test_invalid_char_syntax_error():
     parser = Parser('@')
