@@ -154,6 +154,8 @@ class MainWindow(QWidget):
         if self.cur_file is not None:
             with open(self.cur_file, 'w', encoding='utf-8') as f:
                 f.write(self.codeinput.toPlainText())
+            self.unsaved_changes = False
+            self.update_title()
         else:
             self.save_file_as()
 
@@ -164,6 +166,8 @@ class MainWindow(QWidget):
             self.cur_file = new_file[0]
             with open(self.cur_file, 'w', encoding='utf-8') as f:
                 f.write(self.codeinput.toPlainText())
+            self.unsaved_changes = False
+            self.update_title()
 
     def show_about(self):
         QMessageBox.information(self, 'О программе', self.ABOUT,
