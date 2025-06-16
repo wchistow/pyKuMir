@@ -486,7 +486,8 @@ class Parser:
                 self._next_token()
                 break
 
-            if self.cur_token.kind in ('STRING', 'NAME', 'CHAR', 'NUMBER'):
+            if (self.cur_token.kind in ('STRING', 'NAME', 'CHAR', 'NUMBER')
+                    or self.cur_token.value in ('да', 'нет', 'нс')):
                 cur_kind = 'val'
             elif self.cur_token.value not in ('(', ')'):
                 cur_kind = 'op'
