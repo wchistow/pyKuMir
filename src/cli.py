@@ -29,7 +29,7 @@ def main(argv):
 
     for file in argv:
         if file.endswith('.kum'):
-            with open(file) as f:
+            with open(file, encoding='utf-8') as f:
                 run_program(f.read(), debug)
 
 

@@ -145,14 +145,14 @@ class MainWindow(QWidget):
         new_file = QFileDialog.getOpenFileName(self, 'Загрузить файл', '',
                                                'Файлы КуМир (*.kum);;Все файлы (*)')
         self.cur_file = new_file[0]
-        with open(self.cur_file) as f:
+        with open(self.cur_file, encoding='utf-8') as f:
             self.codeinput.setPlainText(f.read())
             self.codeinput.highlight_syntax()
             self.unsaved_changes = False
 
     def save_file(self):
         if self.cur_file is not None:
-            with open(self.cur_file, 'w') as f:
+            with open(self.cur_file, 'w', encoding='utf-8') as f:
                 f.write(self.codeinput.toPlainText())
         else:
             self.save_file_as()
@@ -162,7 +162,7 @@ class MainWindow(QWidget):
                                                'Файлы КуМир (*.kum);;Все файлы (*)')
         if new_file[0]:
             self.cur_file = new_file[0]
-            with open(self.cur_file, 'w') as f:
+            with open(self.cur_file, 'w', encoding='utf-8') as f:
                 f.write(self.codeinput.toPlainText())
 
     def show_about(self):

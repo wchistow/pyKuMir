@@ -11,16 +11,16 @@ from .lexer import CSS, highlight_text_without_css
 
 class DocView(QWidget):
     PRETTY_NAMES = {
-        'lang/algs.md': 'Алгоритмы',
-        'lang/branching.md': 'Команды ветвления',
-        'lang/commands.md': 'Команды',
-        'lang/comments.md': 'Комментарии',
-        'lang/exprs.md': 'Вычисления',
-        'lang/io.md': 'Ввод/вывод',
-        'lang/loops.md': 'Циклы',
-        'lang/prog_struct.md': 'Структура программы',
-        'lang/README.md': 'Содержание',
-        'lang/vars.md': 'Переменные'
+        'algs.md': 'Алгоритмы',
+        'branching.md': 'Команды ветвления',
+        'commands.md': 'Команды',
+        'comments.md': 'Комментарии',
+        'exprs.md': 'Вычисления',
+        'io.md': 'Ввод/вывод',
+        'loops.md': 'Циклы',
+        'prog_struct.md': 'Структура программы',
+        'README.md': 'Содержание',
+        'vars.md': 'Переменные'
     }
 
     def __init__(self, parent=None):
@@ -32,7 +32,7 @@ class DocView(QWidget):
         self.view.setLineWrapMode(QTextBrowser.LineWrapMode.WidgetWidth)
 
         self.base_dir = Path(__file__).parent.parent.parent
-        with open(os.path.join(self.base_dir, 'docs', 'lang', 'README.md')) as f:
+        with open(os.path.join(self.base_dir, 'docs', 'lang', 'README.md'), encoding='utf-8') as f:
             self.view.setHtml(_prepare(f.read(), self.base_dir))
 
         self.view.anchorClicked.connect(self.update_selected_item)
@@ -41,7 +41,7 @@ class DocView(QWidget):
         for f in _get_all_files(os.path.join(self.base_dir, 'docs', 'lang')):
             item = QTreeWidgetItem(self.tree)
             item.setText(0, self.PRETTY_NAMES[f])
-            item.setData(1, 0, os.path.join(self.base_dir, 'docs', f))
+            item.setData(1, 0, os.path.join(self.base_dir, 'docs', 'lang', f))
             self.tree.addTopLevelItem(item)
             if item.data(1, 0) == os.path.join(self.base_dir, 'docs',
                                                             'lang', 'README.md'):
@@ -61,8 +61,9 @@ class DocView(QWidget):
 
     def on_selection_changed(self):
         with open(
-                os.path.join(self.base_dir, 'docs',
-                             self.tree.selectedItems()[0].data(1, 0))
+                os.path.join(self.base_dir, 'docs', 'lang',
+                             self.tree.selectedItems()[0].data(1, 0)),
+                encoding='utf-8'
         ) as f:
             self.view.setHtml(_prepare(f.read(), self.base_dir))
 
@@ -77,10 +78,9 @@ class DocView(QWidget):
 
 def _get_all_files(root: str) -> list[str]:
     result = []
-    regex = os.path.join('.*', 'docs', '(.*)')
     for item in os.listdir(root):
         if not os.path.isdir(os.path.join(root, item)):
-            result.append(re.match(regex, os.path.join(root, item)).groups()[0])
+            result.append(item)
         else:
             result += _get_all_files(os.path.join(root, item))
 
