@@ -237,7 +237,7 @@ class Parser:
         elif self.cur_token.value == 'кц' and self.envs[-1] == Env.LOOP_FOR:
             self.envs.pop()
             self.res.append(LoopForEnd(self.line))
-        elif self.cur_token.value == 'кц' and self.envs[-1] == Env.LOOP_UNTIL:
+        elif self.cur_token.value in ('кц', 'кц_при') and self.envs[-1] == Env.LOOP_UNTIL:
             self._handle_loop_until_end()
         elif self.cur_token.value == 'выбор' and Env.INTRODUCTION not in self.envs:
             self.envs.append(Env.SWITCH)
@@ -410,11 +410,15 @@ class Parser:
         self.res.append(LoopForStart(self.line - 1, target, from_expr, to_expr, step))
 
     def _handle_loop_until_end(self):
-        self._next_token()
+        if self.cur_token.value == 'кц_при':
+            until = True
+        else:
+            until = False
+            self._next_token()
 
         if self.cur_token.kind == 'NEWLINE':
             cond = [Value('лог', 'да')]
-        elif self.cur_token.value == 'при':
+        elif self.cur_token.value == 'при' or until:
             self._next_token()
             cond = self._parse_expr()
             if self.cur_token.kind != 'NEWLINE':
