@@ -182,7 +182,6 @@ class Parser:
             ret_name = arg[2]
             ret_type = arg[1]
             if arg[0] == 'аргрез':
-                arg[0] = 'арг'
                 return arg, ret_type, ret_name
             return None, ret_type, ret_name
         else:

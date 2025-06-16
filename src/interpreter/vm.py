@@ -71,6 +71,10 @@ class VM:
         :param typename: тип переменной(ых), `None`, если нужно сохранить значения в уже объявленную переменную
         :param names: имя/имена переменной(ых)
         """
+        if self.cur_algs:
+            for arg in self.algs[self.cur_algs[-1]][0]:
+                if arg[0] == 'арг' and arg[2] in names:
+                    raise RuntimeException(lineno, 'нельзя присвоить аргументу')
         value = self.stack.pop()
         if typename is None:  # сохранение значения в уже объявленную переменную
             if not self._var_defined(names[0]):
