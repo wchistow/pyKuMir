@@ -150,39 +150,37 @@ class Parser:
                                  ret_type=ret_type, ret_name=ret_name, args=args))
 
     def _handle_alg_args(self) -> tuple[list, str, str]:
-        self._next_token()
-        ret_name = ''
-        ret_type = ''
+        args = []
         last_kind = 'арг'
         last_type = ''
+        arg, ret_type, ret_name = self._handle_arg(last_kind, last_type)
+        if arg is not None:
+            args.append(arg)
+            last_kind = arg[0]
+            last_type = arg[1]
+        while self.cur_token.kind == 'COMMA':
+            arg, ret_type, ret_name = self._handle_arg(last_kind, last_type)
+            if arg is not None:
+                args.append(arg)
+                last_kind = arg[0]
+                last_type = arg[1]
+        return args, ret_name, ret_type
+
+    def _handle_arg(self, last_kind: str, last_type: str) -> tuple[list[str] | None, str, str]:
+        ret_type = ''
+        ret_name = ''
+        self._next_token()
         arg = self._parse_arg()
         arg = [arg[0] or last_kind, arg[1] or last_type, arg[2]]
-        args = []
         if 'рез' in arg[0]:
             ret_name = arg[2]
             ret_type = arg[1]
             if arg[0] == 'аргрез':
                 arg[0] = 'арг'
-                args.append(arg)
+                return arg, ret_type, ret_name
+            return None, ret_type, ret_name
         else:
-            args.append(arg)
-        last_kind = arg[0]
-        last_type = arg[1]
-        while self.cur_token.kind == 'COMMA':
-            self._next_token()
-            arg = self._parse_arg()
-            arg = [arg[0] or last_kind, arg[1] or last_type, arg[2]]
-            if 'рез' in arg[0]:
-                ret_name = arg[2]
-                ret_type = arg[1]
-                if arg[0] == 'аргрез':
-                    arg[0] = 'арг'
-                    args.append(arg)
-            else:
-                args.append(arg)
-            last_kind = arg[0]
-            last_type = arg[1]
-        return args, ret_name, ret_type
+            return arg, ret_type, ret_name
 
     def _parse_arg(self) -> tuple[str, str, str]:
         if self.cur_token.value in ('арг', 'рез', 'аргрез'):
