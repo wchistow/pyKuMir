@@ -15,12 +15,13 @@
 <h2>Логические операции:</h2>
 
 <ul>
- <li> <code>></code></li>
- <li> <code><</code></li>
- <li> <code><=</code></li>
- <li> <code>>=</code></li>
- <li> <code>=</code></li>
- <li> <code><></code></li>
- <li> <code>и</code></li>
- <li> <code>или</code></li>
+ <li><code>></code></li>
+ <li><code><</code></li>
+ <li><code><=</code></li>
+ <li><code>>=</code></li>
+ <li><code>=</code></li>
+ <li><code><></code></li>
+ <li><code>и</code></li>
+ <li><code>или</code></li>
+ <li><code>не</code></li>
 </ul>

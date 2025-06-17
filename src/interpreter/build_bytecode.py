@@ -249,7 +249,10 @@ class BytecodeBuilder:
         res: list[BytecodeType] = []
         for v in expr:
             if isinstance(v, Op):
-                res.append((lineno, Bytecode.BIN_OP, (v.op,)))
+                if v.unary:
+                    res.append((lineno, Bytecode.UNARY_OP, (v.op,)))
+                else:
+                    res.append((lineno, Bytecode.BIN_OP, (v.op,)))
             elif isinstance(v, Call):
                 self._handle_call(v, 0)
                 self.cur_inst_n -= 1

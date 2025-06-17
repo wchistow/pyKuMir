@@ -4,4 +4,4 @@ from dataclasses import dataclass
 @dataclass
 class Value:
     typename: str
-    value: str | int | float | bool
+    value: str | int | float

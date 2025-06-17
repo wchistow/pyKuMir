@@ -18,6 +18,22 @@ def test_parse_assert():
 
     assert parsed == [ast_classes.Assert(1, expr=[Value('лог', 'да')])]
 
+def test_parse_unary_op():
+    parser = Parser('вывод не +1 > 0')
+    parsed = parser.parse()
+
+    assert parsed == [
+        ast_classes.Output(lineno=0, exprs=[
+            [
+                Value(typename='цел', value=1),
+                ast_classes.Op(op='+', unary=True),
+                Value(typename='цел', value=0),
+                ast_classes.Op(op='>', unary=False),
+                ast_classes.Op(op='не', unary=True)
+            ]
+        ])
+    ]
+
 def test_invalid_char_syntax_error():
     parser = Parser('@')
     with pytest.raises(SyntaxException):

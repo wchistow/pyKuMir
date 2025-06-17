@@ -315,7 +315,7 @@ class Parser:
         elif self.cur_token.kind != 'NEWLINE':
             raise SyntaxException(self.line, self.cur_token.value)
 
-        self.res.append(Output(self.line - 1, [_to_reverse_polish(expr) for expr in exprs]))
+        self.res.append(Output(self.line - 1, exprs))
 
     def _handle_input(self) -> None:
         targets: list[str] = []
@@ -494,7 +494,8 @@ class Parser:
             else:
                 cur_kind = ''
 
-            if last_kind == cur_kind:
+            if (last_kind == cur_kind and
+                    not (last_kind == 'op' and self.cur_token.value in ('+', '-', 'не'))):
                 raise SyntaxException(self.line, self.cur_token.value)
 
             if last_name and self.cur_token.value == '(':
@@ -566,10 +567,14 @@ def _get_val(kind: str, value: str) -> Value | Op:
         return Value('get-name', value)
 
 
-def _get_priority(op: Op) -> int:
+def _get_priority(op: Op, unary: bool) -> int:
     """Возвращает приоритет оператора."""
-    if op.op in ('*', '/', '**'):
+    if unary and op.op in ('-', '+'):
+        return 4
+    elif unary and op.op == 'не':
         return 1
+    if op.op in ('*', '/', '**'):
+        return 3
     elif op.op in ('>', '<', '=', '>=', '<=', '<>'):
         return 2
     elif op.op in ('или', 'и'):
@@ -584,6 +589,7 @@ def _to_reverse_polish(expr: Iterable[Value | Op]) -> list[Value | Op]:
     in_parentheses = False
     indent = 0
     code_in_brackets = []
+    prev = None
     for token in expr:
         if in_parentheses:
             if token == Op(op='('):
@@ -601,19 +607,26 @@ def _to_reverse_polish(expr: Iterable[Value | Op]) -> list[Value | Op]:
                     code_in_brackets.append(token)
         else:
             if isinstance(token, Op):
-                if token == Op(op='('):
+                if token.op == '(':
                     in_parentheses = True
                 else:
-                    while True:
-                        if not operator_stack:
-                            break
-                        if _get_priority(operator_stack[-1]) >= _get_priority(token):
-                            notation.append(Op(operator_stack.pop().op))
+                    while operator_stack:
+                        unary = ((prev is None or (isinstance(prev, Op) and prev.op != ')'))
+                            and token.op in ('+', '-', 'не'))
+                        op_from_stack = operator_stack[-1]
+                        if (_get_priority(op_from_stack, op_from_stack.unary)
+                                >= _get_priority(token, unary=unary)):
+                            notation.append(Op(op_from_stack.op, unary=op_from_stack.unary))
+                            operator_stack.pop()
                         else:
                             break
+                    if ((prev is None or (isinstance(prev, Op) and prev.op != ')'))
+                            and token.op in ('+', '-', 'не')):
+                        token.unary = True
                     operator_stack.append(token)
             else:
                 notation.append(token)
+        prev = token
     for op in operator_stack[::-1]:
-        notation.append(Op(op.op))
+        notation.append(Op(op.op, op.unary))
     return notation

@@ -26,6 +26,7 @@ class StoreVar(Statement):
 @dataclass
 class Op:
     op: str
+    unary: bool = False
 
 @dataclass
 class AlgStart(Statement):

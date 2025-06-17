@@ -39,6 +39,7 @@ class VM:
             Bytecode.LOAD_CONST: lambda inst: self.stack.append(inst[2][0]),
             Bytecode.LOAD_NAME: lambda inst: self.stack.append(self.get_var(inst[0], inst[2][0])),
             Bytecode.BIN_OP: lambda inst: self.bin_op(inst[0], inst[2][0]),
+            Bytecode.UNARY_OP: lambda inst: self.unary_op(inst[0], inst[2][0]),
             Bytecode.STORE: lambda inst: self.store_var(inst[0], inst[2][0], inst[2][1]),
             Bytecode.OUTPUT: lambda inst: self.output(inst[2][0]),
             Bytecode.INPUT: lambda inst: self.input(inst[0], inst[2]),
@@ -141,6 +142,21 @@ class VM:
             )
         else:
             raise RuntimeException(lineno, f'нельзя "{b.typename} {op} {a.typename}"')
+
+    def unary_op(self, lineno: int, op: str) -> None:
+        a = self.stack.pop()
+        if op == 'не':
+            if a.typename != 'лог':
+                raise RuntimeException(lineno, f'нельзя "не {a.typename}"')
+            self.stack.append(Value('лог', _bool_to_str(not _str_to_bool(a.value))))
+        elif op in ('+', '-'):
+            if a.typename not in ('цел', 'вещ'):
+                raise RuntimeException(lineno, f'нельзя "{op}{a.typename}"')
+
+            if op == '-':
+                self.stack.append(Value(a.typename, -a.value))
+            else:
+                self.stack.append(a)
 
     def output(self, exprs_num: int) -> None:
         """
