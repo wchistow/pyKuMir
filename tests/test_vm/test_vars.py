@@ -91,6 +91,12 @@ def test_var_with_space_in_name():
     vm.execute()
     assert print_mock.printed_text == '5'
 
+def test_var_with_expr_with_unary_operators():
+    bytecode = code2bc('вывод не -1 > 0')
+    vm = create_vm(*bytecode)
+    vm.execute()
+    assert print_mock.printed_text == 'да'
+
 def test_assign_to_not_defined_error():
     bytecode = code2bc('а := 5')
     vm = create_vm(*bytecode)
