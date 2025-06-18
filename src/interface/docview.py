@@ -26,7 +26,7 @@ class DocView(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.resize(600, 500)
+        self.resize(815, 500)
 
         self.view = QTextBrowser(self)
         self.view.setLineWrapMode(QTextBrowser.LineWrapMode.WidgetWidth)
@@ -52,10 +52,14 @@ class DocView(QWidget):
         self.tree_and_doc.addWidget(self.tree)
         self.tree_and_doc.addWidget(self.view)
 
+        self.view.resize(800, 400)
+        self.view.setMinimumSize(400, 300)
+        self.tree.setMinimumSize(150, 300)
+
         self.grid = QGridLayout(self)
         self.grid.addWidget(self.tree_and_doc, 0, 0, 0, 0)
 
-        self.setMinimumSize(500, 400)
+        self.setMinimumSize(700, 400)
 
         self.setLayout(self.grid)
 
