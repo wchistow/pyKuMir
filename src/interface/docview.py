@@ -102,6 +102,11 @@ def _highlight(m: re.Match[str]) -> str:
 
 
 def _links_from_relative_to_absolute(text: str, base_dir: Path) -> str:
-    return re.sub(r'\./(?P<filename>[a-z_]+\.md)',
-               rf'file://{re.escape(os.path.join(base_dir, "docs", "lang"))}'
-               rf'{os.path.sep}\g<filename>', text)
+    res = []
+    for line in text.split('\n'):
+        if line.strip().startswith('<li><a href='):
+            start, filename, end = line.split('"')
+            res.append(f'{start}"{os.path.join(base_dir, "docs", "lang", filename)}"{end}')
+        else:
+            res.append(line)
+    return '\n'.join(res)
