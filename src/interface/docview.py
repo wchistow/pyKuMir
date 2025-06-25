@@ -106,7 +106,9 @@ def _links_from_relative_to_absolute(text: str, base_dir: Path) -> str:
     for line in text.split('\n'):
         if line.strip().startswith('<li><a href='):
             start, filename, end = line.split('"')
-            res.append(f'{start}"{os.path.join(base_dir, "docs", "lang", filename)}"{end}')
+            full_filename = os.path.join(base_dir, "docs", "lang", filename)
+            res.append(f'{start}"file://{"" if full_filename.startswith("/") else "/"}'
+                       f'{full_filename}"{end}')
         else:
             res.append(line)
     return '\n'.join(res)

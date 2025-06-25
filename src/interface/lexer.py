@@ -7,7 +7,8 @@ from pygments.token import Comment, Keyword, Number, String, Name, Whitespace, P
 
 from interpreter.constants import KEYWORDS, TYPES
 
-with open(os.path.join(os.path.dirname(__file__), 'code_style.css')) as f:
+with open(os.path.join(os.path.dirname(__file__), 'code_style.css'),
+          encoding='utf-8') as f:
     CSS = f'<style>\n{f.read()}\n</style>'
 
 
