@@ -1,4 +1,5 @@
 import os
+from sys import platform
 import re
 from pathlib import Path
 
@@ -73,6 +74,8 @@ class DocView(QWidget):
 
     def update_selected_item(self, new_file):
         new_file_path = new_file.path()
+        if platform == 'win32':
+            new_file_path = new_file_path[1:]
         for i in range(self.tree.topLevelItemCount()):
             item = self.tree.topLevelItem(i)
             if item.data(1, 0) == new_file_path:
@@ -107,7 +110,7 @@ def _links_from_relative_to_absolute(text: str, base_dir: Path) -> str:
         if line.strip().startswith('<li><a href='):
             start, filename, end = line.split('"')
             full_filename = os.path.join(base_dir, "docs", "lang", filename)
-            res.append(f'{start}"file://{"" if full_filename.startswith("/") else "/"}'
+            res.append(f'{start}"file://{"/" if platform == "win32" else ""}'
                        f'{full_filename}"{end}')
         else:
             res.append(line)
