@@ -7,6 +7,8 @@ from pygments.token import Comment, Keyword, Number, String, Name, Whitespace, P
 
 from interpreter.constants import KEYWORDS, TYPES
 
+BOOLS = {'да', 'нет'}
+
 with open(os.path.join(os.path.dirname(__file__), 'code_style.css'),
           encoding='utf-8') as f:
     CSS = f'<style>\n{f.read()}\n</style>'
@@ -18,7 +20,8 @@ class KuMirLexer(RegexLexer):
     tokens = {
         'root': [
             (words(TYPES, prefix=r'\b', suffix=r'\b'), Keyword.Type),
-            (words(KEYWORDS, prefix=r'\b', suffix=r'\b'), Keyword),
+            (words(KEYWORDS - BOOLS, prefix=r'\b', suffix=r'\b'), Keyword),
+            (words(BOOLS, prefix=r'\b', suffix=r'\b'), Keyword.Constant),
             (
                 r'(\w+)(\s*)(\()',
                 bygroups(Name.Function, Whitespace, Punctuation)
