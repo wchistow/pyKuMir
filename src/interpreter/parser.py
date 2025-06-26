@@ -4,7 +4,7 @@ from typing import Iterable
 from .ast_classes import (AlgStart, AlgEnd, Call, Input, IfStart, IfEnd, Statement,
                           StoreVar, Op, Output, ElseStart, LoopWithCountStart, LoopWithCountEnd,
                           LoopWhileStart, LoopWhileEnd, LoopForStart, LoopForEnd, LoopUntilStart,
-                          LoopUntilEnd, Exit, Assert)
+                          LoopUntilEnd, Exit, Assert, Stop)
 from .value import Value
 from .tokenizer import Tokenizer
 from .exceptions import SyntaxException
@@ -217,6 +217,8 @@ class Parser:
             self._handle_input()
         elif self.cur_token.value == 'утв':
             self._handle_assert()
+        elif self.cur_token.value == 'стоп':
+            self._handle_stop()
         elif self.cur_token.value == 'выход' and Env.INTRODUCTION not in self.envs:
             self.res.append(Exit(self.line))
         elif self.cur_token.value == 'если' and Env.INTRODUCTION not in self.envs:
@@ -342,7 +344,13 @@ class Parser:
         if self.cur_token.kind != 'NEWLINE':
             raise SyntaxException(self.line, self.cur_token.value)
 
-        self.res.append(Assert(self.line, expr))
+        self.res.append(Assert(self.line - 1, expr))
+
+    def _handle_stop(self):
+        self._next_token()
+        if self.cur_token.kind != 'NEWLINE':
+            raise SyntaxException(self.line, self.cur_token.value)
+        self.res.append(Stop(self.line - 1))
 
     def _handle_if(self):
         self._next_token()

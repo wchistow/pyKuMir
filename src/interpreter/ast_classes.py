@@ -92,3 +92,6 @@ class Exit(Statement):
 @dataclass
 class Assert(Statement):
     expr: Expr
+
+class Stop(Statement):
+    ...

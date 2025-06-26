@@ -17,6 +17,7 @@ class Bytecode(Enum):
     JUMP_TAG_IF_FALSE = auto()
     JUMP_TAG_IF_TRUE = auto()
     ASSERT = auto()
+    STOP = auto()
 
 
 BytecodeType = tuple[int, Bytecode, tuple[Value | None | tuple[Value], ...]]

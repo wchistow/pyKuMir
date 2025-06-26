@@ -35,6 +35,8 @@ class VM:
         self.cur_algs: list[str] = []
         self.cur_algs_inst_n: list[int] = [0]
 
+        self.stopped = False
+
         self.CALL_TRANSITIONS = {
             Bytecode.LOAD_CONST: lambda inst: self.stack.append(inst[2][0]),
             Bytecode.LOAD_NAME: lambda inst: self.stack.append(self.get_var(inst[0], inst[2][0])),
@@ -48,7 +50,8 @@ class VM:
             Bytecode.JUMP_TAG: lambda inst: self.jump_tag(inst[2][0]),
             Bytecode.JUMP_TAG_IF_FALSE: lambda inst: self.jump_tag_if_false(inst[0], inst[2][0]),
             Bytecode.JUMP_TAG_IF_TRUE: lambda inst: self.jump_tag_if_true(inst[0], inst[2][0]),
-            Bytecode.ASSERT: lambda inst: self.assert_(inst[0])
+            Bytecode.ASSERT: lambda inst: self.assert_(inst[0]),
+            Bytecode.STOP: lambda inst: self.stop(),
         }
 
         self.INSTS_WITHOUT_INCREASE_COUNTER = {Bytecode.JUMP_TAG, Bytecode.JUMP_TAG_IF_FALSE,
@@ -63,8 +66,14 @@ class VM:
             self.CALL_TRANSITIONS[inst[1]](inst)
             if inst[1] == Bytecode.RET:
                 break
+            elif inst[1] == Bytecode.STOP:
+                self.stopped = True
+                break
             if inst[1] not in self.INSTS_WITHOUT_INCREASE_COUNTER:
                 self.cur_algs_inst_n[-1] += 1
+
+            if self.stopped:
+                break
 
     def store_var(self, lineno: int, typename: str | None, names: tuple[str]) -> None:
         """
@@ -259,6 +268,9 @@ class VM:
             raise RuntimeException(lineno, 'условие не логическое')
         if cond.value == 'нет':
             raise RuntimeException(lineno, 'условие ложно')
+
+    def stop(self) -> None:
+        self.output_f('СТОП.')
 
     def _load_args(self, lineno: int, args: list[tuple[str, str, str]], n: int) -> Namespace:
         res: Namespace = {}

@@ -16,7 +16,13 @@ def test_parse_assert():
     parser = Parser('утв да')
     parsed = parser.parse()
 
-    assert parsed == [ast_classes.Assert(1, expr=[Value('лог', 'да')])]
+    assert parsed == [ast_classes.Assert(0, expr=[Value('лог', 'да')])]
+
+def test_parse_stop():
+    parser = Parser('стоп')
+    parsed = parser.parse()
+
+    assert parsed == [ast_classes.Stop(0)]
 
 def test_parse_unary_op():
     parser = Parser('вывод не +1 > 0')
