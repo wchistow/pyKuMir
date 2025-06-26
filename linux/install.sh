@@ -8,15 +8,11 @@ check_python_version() {
 }
 
 install_dependencies() {
-  have_prog() {
-      [ -x "$(which $1)" ]
-  }
-
-  if have_prog apt; then
+  if which apt > /dev/null 2>&1; then
     sudo apt install qt6-base-dev python3-pyqt6 python3-pygments || exit 1
-  elif have_prog dnf; then
+  elif which dnf > /dev/null 2>&1; then
     sudo dnf install qt6-qtbase-devel python3-pyqt6 python3-pygments || exit 1
-  elif have_prog pacman; then
+  elif which pacman > /dev/null 2>&1; then
     sudo pacman -S qt6-base python-pyqt6 python-pygments || exit 1
   else
     echo "Извините, ваш дистрибутив пока не поддерживается"
