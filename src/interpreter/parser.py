@@ -194,6 +194,10 @@ class Parser:
         else:
             kind = ''
 
+        if kind == 'арг' and self.cur_token.value == 'рез':
+            kind = 'аргрез'
+            self._next_token()
+
         if self.cur_token.kind == 'TYPE':
             typename = self.cur_token.value
             self._next_token()
