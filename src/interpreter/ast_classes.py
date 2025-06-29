@@ -21,7 +21,7 @@ class Input(Statement):
 class StoreVar(Statement):
     typename: str | None  # `None` - если переменная уже объявлена (`а := 5`)
     names: list[str]
-    value: Optional[Expr] = None
+    value: Union[Optional[Expr], list[list[tuple[Expr, Expr]]]] = None
 
 @dataclass
 class Op:
@@ -95,3 +95,14 @@ class Assert(Statement):
 
 class Stop(Statement):
     ...
+
+@dataclass
+class GetItem(Statement):
+    table_name: str
+    indexes: list[Expr]
+
+@dataclass
+class SetItem(Statement):
+    table_name: str
+    indexes: list[Expr]
+    expr: Expr

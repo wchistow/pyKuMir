@@ -40,10 +40,11 @@ class VM:
         self.CALL_TRANSITIONS = {
             Bytecode.LOAD_CONST: lambda inst: self.stack.append(inst[2][0]),
             Bytecode.LOAD_NAME: lambda inst: self.stack.append(self.get_var(inst[0], inst[2][0])),
+            Bytecode.MAKE_TABLE: lambda inst: self.load_table(*inst[2]),
             Bytecode.BIN_OP: lambda inst: self.bin_op(inst[0], inst[2][0]),
             Bytecode.UNARY_OP: lambda inst: self.unary_op(inst[0], inst[2][0]),
             Bytecode.STORE: lambda inst: self.store_var(inst[0], inst[2][0], inst[2][1]),
-            Bytecode.OUTPUT: lambda inst: self.output(inst[2][0]),
+            Bytecode.OUTPUT: lambda inst: self.output(inst[0], inst[2][0]),
             Bytecode.INPUT: lambda inst: self.input(inst[0], inst[2]),
             Bytecode.CALL: lambda inst: self.call(inst[0], inst[2][0], inst[2][1]),
             Bytecode.RET: lambda inst: self.ret(inst[0]),
@@ -52,6 +53,8 @@ class VM:
             Bytecode.JUMP_TAG_IF_TRUE: lambda inst: self.jump_tag_if_true(inst[0], inst[2][0]),
             Bytecode.ASSERT: lambda inst: self.assert_(inst[0]),
             Bytecode.STOP: lambda inst: self.stop(),
+            Bytecode.GET_ITEM: lambda inst: self.get_item(inst[0]),
+            Bytecode.SET_ITEM: lambda inst: self.set_item(inst[0], *inst[2]),
         }
 
         self.INSTS_WITHOUT_INCREASE_COUNTER = {Bytecode.JUMP_TAG, Bytecode.JUMP_TAG_IF_FALSE,
@@ -98,6 +101,19 @@ class VM:
         else:  # объявление нескольких переменных (`цел а, б`)
             for name in names:
                 self._save_var(lineno, typename, name, None)
+
+    def load_table(self, typename: str, length: int) -> None:
+        indexes: list[tuple[int, int]] = []
+        for _ in range(length):
+            last_i = self.stack.pop().value
+            first_i = self.stack.pop().value
+            indexes.append((first_i, last_i))
+        self.stack.append(Value(typename, self._make_table(indexes, len(indexes))))
+
+    def _make_table(self, indexes: list[tuple[int, int]], depth: int):
+        start_i, last_i = indexes[0]
+        return {i: None if depth == 1 else self._make_table(indexes[1:], depth-1)
+                for i in range(start_i, last_i+1)}
 
     def bin_op(self, lineno: int, op: str) -> None:
         """
@@ -167,13 +183,15 @@ class VM:
             else:
                 self.stack.append(a)
 
-    def output(self, exprs_num: int) -> None:
+    def output(self, lineno: int, exprs_num: int) -> None:
         """
         Обрабатывает инструкцию OUTPUT
         :param exprs_num: количество выражений, которых нужно вывести (они загружаются из стека)
         """
-        exprs = [str(self.stack.pop().value) for _ in range(exprs_num)]
-        self.output_f(''.join(exprs[::-1]))
+        exprs = [self.stack.pop() for _ in range(exprs_num)]
+        if any('таб' in expr.typename for expr in exprs):
+            raise RuntimeException(lineno, 'нет индексов у таблицы')
+        self.output_f(''.join(map(lambda e: str(e.value), exprs[::-1])))
 
     def input(self, lineno: int, targets: list[str]) -> None:
         """
@@ -271,6 +289,40 @@ class VM:
 
     def stop(self) -> None:
         self.output_f('СТОП.')
+
+    def get_item(self, lineno: int):
+        index = self.stack.pop()
+        if index.typename != 'цел':
+            raise RuntimeException(lineno, 'индекс - не целое число')
+        table = self.stack.pop()
+        res = table.value[index.value]
+        if res is None:
+            raise RuntimeException(lineno, 'значение элемента таблицы не определено')
+        self.stack.append(res if isinstance(res, Value) else Value(table.typename, res))
+
+    def set_item(self, lineno: int, table_name: str, len_indexes: int):
+        indexes = []
+        for _ in range(len_indexes):
+            index = self.stack.pop()
+            if index.typename != 'цел':
+                raise RuntimeException(lineno, 'индекс - не целое число')
+            indexes.append(index.value)
+        indexes.reverse()
+
+        value = self.stack.pop()
+        table = self.get_var(lineno, table_name)
+        if 'таб' not in table.typename:
+            raise RuntimeException(lineno, 'лишние индексы')
+        table_type = table.typename.removesuffix('таб')
+        if table_type != value.typename:
+            raise RuntimeException(lineno, f'нельзя "{table_type} := {value.typename}"')
+
+        table_part = table.value
+        for index in indexes[:-1]:
+            table_part = table_part[index]
+        table_part[indexes[-1]] = value
+
+        self._save_var(lineno, table_type, table_name, Value(table_type, table.value))
 
     def _load_args(self, lineno: int, args: list[tuple[str, str, str]], n: int) -> Namespace:
         res: Namespace = {}

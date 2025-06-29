@@ -13,6 +13,7 @@ TOKEN_SPECIFICATION = [
     ('TYPE',          r'(\b' + r'\b|\b'.join(TYPES) + r'\b)'),
     ('KEYWORD',       r'(\b' + r'\b|\b'.join(KEYWORDS) + r'\b)'),
     ('OP',            r'(\*\*|\+|\-|\*|/|>=|<=|<>|>|<|\(|\)|\bили\b|\bи\b|\bне\b)'),
+    ('TABLE_BRACKET', r'(\[|\])'),
     ('NAME',          r'[A-Za-zА-Яа-я_][A-Za-zА-Яа-я_0-9]*'),
     ('ASSIGN',        r':='),
     ('EQ',            r'='),

@@ -4,7 +4,7 @@ from typing import Iterable
 from .ast_classes import (AlgStart, AlgEnd, Call, Input, IfStart, IfEnd, Statement,
                           StoreVar, Op, Output, ElseStart, LoopWithCountStart, LoopWithCountEnd,
                           LoopWhileStart, LoopWhileEnd, LoopForStart, LoopForEnd, LoopUntilStart,
-                          LoopUntilEnd, Exit, Assert, Stop)
+                          LoopUntilEnd, Exit, Assert, Stop, Expr, GetItem, SetItem)
 from .value import Value
 from .tokenizer import Tokenizer
 from .exceptions import SyntaxException
@@ -258,6 +258,8 @@ class Parser:
             self._next_token()
             if self.cur_token.kind == 'ASSIGN':  # присваивание
                 self._handle_var_assign(name)
+            elif self.cur_token.value == '[':  # присваивание элементу таблицы
+                self._handle_table_assign(name)
             elif self.cur_token.kind == 'NEWLINE':  # вызов процедуры
                 self.res.append(Call(self.line - 1, name))
             elif self.cur_token.value == '(':  # вызов с аргументами
@@ -271,12 +273,28 @@ class Parser:
         typename = self.cur_token.value
 
         self._next_token()
-        names: list[str] = []
+        if self.cur_token.value == 'таб':
+            typename += 'таб'
+            self._next_token()
 
-        while self.cur_token.kind in ('NAME', 'COMMA'):
+        names: list[str] = []
+        tables: list[tuple[str, list[tuple[Expr, Expr]]]] = []
+
+        while self.cur_token.kind in ('NAME', 'COMMA', 'TABLE_BRACKET'):
+            if self.cur_token.value == '[':
+                indexes = self._parse_table_def()
+                tables.append((names.pop(), indexes))
+                continue
             if self.cur_token.kind == 'NAME':
                 names.append(self.cur_token.value)
             self._next_token()
+
+        if tables:
+            if self.cur_token.kind != 'NEWLINE':
+                raise SyntaxException(self.line, self.cur_token.value)
+            self.res.append(StoreVar(self.line, typename, [table[0] for table in tables],
+                                     [table[1] for table in tables]))
+            return
 
         if self.cur_token.kind == 'ASSIGN':
             self._next_token()
@@ -301,12 +319,45 @@ class Parser:
 
         self.res.append(StoreVar(self.line - 1, typename, names, expr))
 
+    def _parse_table_def(self) -> list[tuple[Expr, Expr]]:
+        self._next_token()
+        indexes = [self._parse_indexes_pair()]
+        while self.cur_token.kind == 'COMMA':
+            self._next_token()
+            indexes.append(self._parse_indexes_pair())
+        if self.cur_token.kind != 'NEWLINE':
+            raise SyntaxException(self.line, self.cur_token.value)
+        if len(indexes) > 3:
+            raise SyntaxException(self.line, self.cur_token.value,
+                                  'таблицы не бывают размерности > 3')
+        return indexes
+
+    def _parse_indexes_pair(self) -> tuple[Expr, Expr]:
+        """Парсит строку вида `<выражение>:<выражение>`"""
+        first_i = self._parse_expr(in_getitem=True)
+        if self.cur_token.kind != 'COLON':
+            raise SyntaxException(self.line, self.cur_token.value)
+        self._next_token()
+        last_i = self._parse_expr(in_getitem=True)
+        return first_i, last_i
+
     def _handle_var_assign(self, name: str) -> None:
         self._next_token()
         expr = self._parse_expr()
         if self.cur_token.kind != 'NEWLINE':
             raise SyntaxException(self.line, self.cur_token.value)
         self.res.append(StoreVar(self.line - 1, None, [name], expr))
+
+    def _handle_table_assign(self, name: str) -> None:
+        self._next_token()
+        indexes = self._parse_table_item_indexes()
+        if self.cur_token.kind != 'ASSIGN':
+            raise SyntaxException(self.line, self.cur_token.value)
+        self._next_token()
+        expr = self._parse_expr()
+        if self.cur_token.kind != 'NEWLINE':
+            raise SyntaxException(self.line, self.cur_token.value)
+        self.res.append(SetItem(self.line - 1, name, indexes, expr))
 
     def _handle_output(self) -> None:
         exprs: list[list[Value | Op]] = []
@@ -477,7 +528,7 @@ class Parser:
 
         self.res.append(call)
 
-    def _parse_expr(self, in_alg_call=False) -> list[Value | Op]:
+    def _parse_expr(self, in_alg_call=False, in_getitem=False) -> Expr:
         expr = []
 
         # Переменные должны быть инициализированы разными значениями,
@@ -487,14 +538,23 @@ class Parser:
         open_brackets = 0
         close_brackets = 0
 
+        open_table_brackets = 0
+        close_table_brackets = 0
+
         last_name = ''
-        while (self.cur_token.kind in ('STRING', 'NAME', 'CHAR', 'NUMBER', 'OP', 'EQ') or
+        while (self.cur_token.kind in ('STRING', 'NAME', 'CHAR', 'NUMBER',
+                                       'OP', 'EQ', 'TABLE_BRACKET') or
                self.cur_token.value in ('да', 'нет', 'нс')):
             if self.cur_token.value == '(':
                 open_brackets += 1
             elif self.cur_token.value == ')':
                 close_brackets += 1
-            if in_alg_call and close_brackets - open_brackets == 1:
+            elif self.cur_token.value == '[':
+                open_table_brackets += 1
+            elif self.cur_token.value == ']':
+                close_table_brackets += 1
+            if (in_alg_call and close_brackets - open_brackets == 1) or\
+                    (in_getitem and close_table_brackets - open_table_brackets == 1):
                 self._next_token()
                 break
 
@@ -512,6 +572,10 @@ class Parser:
 
             if last_name and self.cur_token.value == '(':
                 expr.append(self._parse_call(last_name))
+                last_name = ''
+                continue
+            elif last_name and self.cur_token.value == '[':
+                expr.append(self._parse_getitem(last_name))
                 last_name = ''
                 continue
 
@@ -552,6 +616,20 @@ class Parser:
             args.append(self._parse_expr(in_alg_call=True))
 
         return Call(self.line - 1, name, args)
+
+    def _parse_getitem(self, name: str):
+        self._next_token()
+        indexes = self._parse_table_item_indexes()
+        if self.cur_token.kind != 'NEWLINE':
+            raise SyntaxException(self.line, self.cur_token.value)
+        return GetItem(self.line, name, indexes)
+
+    def _parse_table_item_indexes(self) -> list[Expr]:
+        indexes = [self._parse_expr(in_getitem=True)]
+        while self.cur_token.value == ',':
+            self._next_token()
+            indexes.append(self._parse_expr(in_getitem=True))
+        return indexes
 
 
 def _get_val(kind: str, value: str) -> Value | Op:

@@ -21,6 +21,7 @@ class DocView(QWidget):
         'loops.md': 'Циклы',
         'prog_struct.md': 'Структура программы',
         'README.md': 'Содержание',
+        'tables.md': 'Таблицы',
         'vars.md': 'Переменные'
     }
 

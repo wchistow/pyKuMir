@@ -1,7 +1,8 @@
 from .ast_classes import (StoreVar, Output, Op, AlgStart, AlgEnd, Call,
                           Input, IfStart, IfEnd, ElseStart, LoopWithCountStart,
                           LoopWithCountEnd, LoopWhileStart, LoopWhileEnd, Statement, LoopForStart,
-                          LoopForEnd, Expr, LoopUntilStart, LoopUntilEnd, Exit, Assert, Stop)
+                          LoopForEnd, Expr, LoopUntilStart, LoopUntilEnd, Exit, Assert, Stop,
+                          GetItem, SetItem)
 from .bytecode import Bytecode, BytecodeType
 from .value import Value
 
@@ -61,6 +62,7 @@ class BytecodeBuilder:
             Exit: self._handle_exit,
             Assert: self._handle_assert,
             Stop: self._handle_stop,
+            SetItem: self._handle_set_item,
         }
 
     def build(self, parsed_code: list[Statement]) -> tuple[list[BytecodeType], dict]:
@@ -80,7 +82,16 @@ class BytecodeBuilder:
         return self.bytecode, self.algs
 
     def _handle_store_var(self, stmt: StoreVar, i: int) -> None:
-        if stmt.value is not None:
+        if stmt.typename is not None and 'таб' in stmt.typename:
+            for name, value in zip(stmt.names, stmt.value):
+                for indexes in value[::-1]:
+                    self.cur_ns.extend(self._expr_bc(stmt.lineno, indexes[0]))
+                    self.cur_ns.extend(self._expr_bc(stmt.lineno, indexes[1]))
+                self.cur_ns.append((stmt.lineno, Bytecode.MAKE_TABLE, (stmt.typename, len(value))))
+                self.cur_ns.append((stmt.lineno, Bytecode.STORE, (stmt.typename, name)))
+                self.cur_inst_n += 2
+            return
+        elif stmt.value is not None:
             self.cur_ns.extend(self._expr_bc(stmt.lineno, stmt.value))
         else:
             self.cur_ns.append((stmt.lineno, Bytecode.LOAD_CONST, (None,)))
@@ -220,6 +231,13 @@ class BytecodeBuilder:
         self.cur_ns.append((stmt.lineno, Bytecode.STOP, ()))
         self.cur_inst_n += 1
 
+    def _handle_set_item(self, stmt: SetItem, i: int) -> None:
+        self.cur_ns.extend(self._expr_bc(stmt.lineno, stmt.expr))
+        for index in stmt.indexes:
+            self.cur_ns.extend(self._expr_bc(stmt.lineno, index))
+        self.cur_ns.append((stmt.lineno, Bytecode.SET_ITEM, (stmt.table_name, len(stmt.indexes))))
+        self.cur_inst_n += 1
+
     def _loop_with_count_cond(self, lineno: int, loop_name: str) -> list[BytecodeType]:
         res = [
             (lineno, Bytecode.LOAD_NAME, (loop_name,)),
@@ -261,6 +279,13 @@ class BytecodeBuilder:
             elif isinstance(v, Call):
                 self._handle_call(v, 0)
                 self.cur_inst_n -= 1
+            elif isinstance(v, GetItem):
+                self.cur_ns.append((v.lineno, Bytecode.LOAD_NAME, (v.table_name,)))
+                self.cur_inst_n += 1
+                for index in v.indexes:
+                    self.cur_ns.extend(self._expr_bc(v.lineno, index))
+                    self.cur_ns.append((v.lineno, Bytecode.GET_ITEM, ()))
+                    self.cur_inst_n += 1
             elif v.typename == 'get-name':
                 res.append((lineno, Bytecode.LOAD_NAME, (v.value,)))
             elif isinstance(v, Value):
