@@ -40,7 +40,7 @@ class VM:
         self.CALL_TRANSITIONS = {
             Bytecode.LOAD_CONST: lambda inst: self.stack.append(inst[2][0]),
             Bytecode.LOAD_NAME: lambda inst: self.stack.append(self.get_var(inst[0], inst[2][0])),
-            Bytecode.MAKE_TABLE: lambda inst: self.load_table(*inst[2]),
+            Bytecode.MAKE_TABLE: lambda inst: self.make_table(*inst[2]),
             Bytecode.BIN_OP: lambda inst: self.bin_op(inst[0], inst[2][0]),
             Bytecode.UNARY_OP: lambda inst: self.unary_op(inst[0], inst[2][0]),
             Bytecode.STORE: lambda inst: self.store_var(inst[0], inst[2][0], inst[2][1]),
@@ -102,17 +102,17 @@ class VM:
             for name in names:
                 self._save_var(lineno, typename, name, None)
 
-    def load_table(self, typename: str, length: int) -> None:
+    def make_table(self, typename: str, length: int) -> None:
         indexes: list[tuple[int, int]] = []
         for _ in range(length):
             last_i = self.stack.pop().value
             first_i = self.stack.pop().value
             indexes.append((first_i, last_i))
-        self.stack.append(Value(typename, self._make_table(indexes, len(indexes))))
+        self.stack.append(Value(typename, self._build_table(indexes, len(indexes))))
 
-    def _make_table(self, indexes: list[tuple[int, int]], depth: int):
+    def _build_table(self, indexes: list[tuple[int, int]], depth: int):
         start_i, last_i = indexes[0]
-        return {i: None if depth == 1 else self._make_table(indexes[1:], depth-1)
+        return {i: None if depth == 1 else self._build_table(indexes[1:], depth - 1)
                 for i in range(start_i, last_i+1)}
 
     def bin_op(self, lineno: int, op: str) -> None:
