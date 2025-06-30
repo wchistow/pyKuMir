@@ -322,17 +322,21 @@ class VM:
         if index.typename != 'цел':
             raise RuntimeException(lineno, 'индекс - не целое число')
 
-        table = self.stack.pop()
-        if 'таб' in table.typename:
-            res = table.value[index.value]
-        elif table.typename == 'лит':
-            res = table.value[index.value - 1]
+        var = self.stack.pop()
+        if 'таб' in var.typename:
+            if index.value not in var.value:
+                raise RuntimeException(lineno, 'выход за границу таблицы')
+            res = var.value[index.value]
+        elif var.typename == 'лит':
+            if index.value > len(var.value):
+                raise RuntimeException(lineno, 'индекс символа больше длины строки')
+            res = var.value[index.value - 1]
         else:
             raise RuntimeException(lineno, 'лишние индексы')
 
         if res is None:
             raise RuntimeException(lineno, 'значение элемента таблицы не определено')
-        self.stack.append(res if isinstance(res, Value) else Value(table.typename, res))
+        self.stack.append(res if isinstance(res, Value) else Value(var.typename, res))
 
     def set_item(self, lineno: int, name: str, len_indexes: int) -> None:
         indexes: list[int] = []
