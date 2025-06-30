@@ -290,18 +290,25 @@ class VM:
     def stop(self) -> None:
         self.output_f('СТОП.')
 
-    def get_item(self, lineno: int):
+    def get_item(self, lineno: int) -> None:
         index = self.stack.pop()
         if index.typename != 'цел':
             raise RuntimeException(lineno, 'индекс - не целое число')
+
         table = self.stack.pop()
-        res = table.value[index.value]
+        if 'таб' in table.typename:
+            res = table.value[index.value]
+        elif table.typename == 'лит':
+            res = table.value[index.value - 1]
+        else:
+            raise RuntimeException(lineno, 'лишние индексы')
+
         if res is None:
             raise RuntimeException(lineno, 'значение элемента таблицы не определено')
         self.stack.append(res if isinstance(res, Value) else Value(table.typename, res))
 
-    def set_item(self, lineno: int, table_name: str, len_indexes: int):
-        indexes = []
+    def set_item(self, lineno: int, name: str, len_indexes: int) -> None:
+        indexes: list[int] = []
         for _ in range(len_indexes):
             index = self.stack.pop()
             if index.typename != 'цел':
@@ -310,19 +317,44 @@ class VM:
         indexes.reverse()
 
         value = self.stack.pop()
-        table = self.get_var(lineno, table_name)
-        if 'таб' not in table.typename:
+        var = self.get_var(lineno, name)
+        if 'таб' in var.typename:
+            self._set_item_table(lineno, name, indexes, value, var)
+        elif var.typename == 'лит':
+            if len(indexes) > 1:
+                raise RuntimeException(lineno, 'лишние индексы')
+            self._set_item_str(lineno, name, indexes[0], value, var)
+        else:
             raise RuntimeException(lineno, 'лишние индексы')
-        table_type = table.typename.removesuffix('таб')
+
+    def _set_item_table(self, lineno: int, var_name: str, indexes: list[int],
+                        value: Value, var: Value) -> None:
+        table_type = var.typename.removesuffix('таб')
         if table_type != value.typename:
             raise RuntimeException(lineno, f'нельзя "{table_type} := {value.typename}"')
 
-        table_part = table.value
+        table_part = var.value
         for index in indexes[:-1]:
+            if index not in table_part:
+                raise RuntimeException(lineno, 'выход за границу таблицы')
             table_part = table_part[index]
+
+        if indexes[-1] not in table_part:
+            raise RuntimeException(lineno, 'выход за границу таблицы')
         table_part[indexes[-1]] = value
 
-        self._save_var(lineno, table_type, table_name, Value(table_type, table.value))
+        self._save_var(lineno, table_type, var_name, Value(table_type, var.value))
+
+    def _set_item_str(self, lineno: int, var_name: str, index: int,
+                      value: Value, var: Value) -> None:
+        if value.typename == 'сим' or (value.typename == 'лит' and len(value.value) == 1):
+            if index > len(var.value):
+                raise RuntimeException(lineno, 'индекс символа больше длины строки')
+            new_val = var.value
+            new_val = new_val[:index - 1] + value.value + new_val[index:]
+            self._save_var(lineno, var.typename, var_name, Value('лит', new_val))
+        else:
+            raise RuntimeException(lineno, f'нельзя "сим := {value.typename}"')
 
     def _load_args(self, lineno: int, args: list[tuple[str, str, str]], n: int) -> Namespace:
         res: Namespace = {}

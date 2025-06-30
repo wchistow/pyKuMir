@@ -296,6 +296,9 @@ class Parser:
                                      [table[1] for table in tables]))
             return
 
+        if 'таб' in typename and not tables:
+            raise SyntaxException(self.line, self.cur_token.value, 'нет границ')
+
         if self.cur_token.kind == 'ASSIGN':
             self._next_token()
             expr = self._parse_expr()
