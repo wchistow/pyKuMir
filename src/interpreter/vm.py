@@ -193,7 +193,7 @@ class VM:
             raise RuntimeException(lineno, 'нет индексов у таблицы')
         self.output_f(''.join(map(lambda e: str(e.value), exprs[::-1])))
 
-    def input(self, lineno: int, targets: list[str]) -> None:
+    def input(self, lineno: int, targets: list[str | tuple[str, int]]) -> None:
         """
         Обрабатывает инструкцию INPUT
         :param lineno: номер текущей строки кода
@@ -201,27 +201,54 @@ class VM:
         """
         cur_target_i = 0
         while cur_target_i < len(targets):
+            indexes = []
             inputted = self.input_f()
             target = targets[cur_target_i]
-            try:
-                target_var = self._get_all_namespaces()[target]
-            except KeyError:
-                raise RuntimeException(lineno, f'имя "{target}" не объявлено') from None
-            target_var_type = target_var[0]
+
+            if isinstance(target, str):
+                try:
+                    target_var = self._get_all_namespaces()[target]
+                except KeyError:
+                    raise RuntimeException(lineno,
+                                           f'имя "{target}" не объявлено') from None
+                target_var_type = target_var[0]
+                target_var_name = target
+            else:
+                target_var_name = target[0]
+                for _ in range(target[1]):
+                    index = self.stack.pop()
+                    if index.typename != 'цел':
+                        raise RuntimeException(lineno, 'индекс - не целое число')
+                    indexes.append(index.value)
+                target_var = self._get_all_namespaces()[target_var_name]
+                target_var_type = target_var[0].removesuffix('таб')
+
             if target_var_type == 'лит':
-                self._save_var(lineno, target_var_type, target,
-                               _convert_string_to_type(lineno, inputted, target_var_type))
+                self._save_inputted(lineno, target_var_type, target_var_name,
+                                    _convert_string_to_type(lineno, inputted, target_var_type),
+                                    indexes)
+                cur_target_i += 1
+            elif 'таб' in target_var_type:
+                self._save_inputted(lineno, target_var_type, target_var_name,
+                                    _convert_string_to_type(lineno, inputted, target_var_type),
+                                    indexes)
                 cur_target_i += 1
             else:
                 for text in inputted.split(' '):
-                    try:
-                        target = targets[cur_target_i]
-                    except IndexError:
+                    if cur_target_i >= len(targets):
                         break
-                    var_type = self._get_all_namespaces()[target][0]
-                    self._save_var(lineno, var_type, target,
-                                   _convert_string_to_type(lineno, text, var_type))
+                    self._save_inputted(lineno, target_var_type, target_var_name,
+                                        _convert_string_to_type(lineno, text, target_var_type),
+                                        indexes)
                     cur_target_i += 1
+
+    def _save_inputted(self, lineno: int, var_type: str, var_name: str,
+                       value: Value, indexes: list[int]) -> None:
+        if indexes:
+            var = self._get_all_namespaces()[var_name][1]
+            self._set_item_table(lineno, var_name, indexes, value, var)
+        else:
+            self._save_var(lineno, var_type, var_name, value)
 
     def call(self, lineno: int, name: str, args_n: int) -> None:
         """

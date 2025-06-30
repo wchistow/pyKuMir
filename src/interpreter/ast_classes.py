@@ -15,7 +15,7 @@ class Output(Statement):
 
 @dataclass
 class Input(Statement):
-    targets: list[str]
+    targets: list[Union[str, 'GetItem']]
 
 @dataclass
 class StoreVar(Statement):

@@ -378,17 +378,34 @@ class Parser:
         self.res.append(Output(self.line - 1, exprs))
 
     def _handle_input(self) -> None:
-        targets: list[str] = []
+        targets: list[str | GetItem] = []
 
         self._next_token()
         last = self.cur_token.kind
-        while self.cur_token.kind in ('NAME', 'COMMA'):
+        last_name = ''
+        while self.cur_token.kind in ('NAME', 'COMMA', 'TABLE_BRACKET'):
             if self.cur_token.kind == 'NAME':
-                targets.append(self.cur_token.value)
+                last_name = self.cur_token.value
+                self._next_token()
+                last = self.cur_token.kind
+                continue
+            if last_name and self.cur_token.value == '[':
+                targets.append(self._parse_getitem(last_name))
+                last_name = ''
+            elif last_name:
+                targets.append(last_name)
+                last_name = ''
+
+            if self.cur_token.kind == 'NEWLINE':
+                break
+
             self._next_token()
             if last == self.cur_token.kind:
                 raise SyntaxException(self.line, self.cur_token.value)
             last = self.cur_token.kind
+        if last_name:
+            targets.append(last_name)
+
         if not targets:
             raise SyntaxException(self.line, self.cur_token.value, 'куда вводить?')
         elif self.cur_token.kind != 'NEWLINE':

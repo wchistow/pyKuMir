@@ -54,6 +54,13 @@ def test_input_char():
     vm.execute()
     assert print_mock.printed_text == 'а'
 
+def test_input_to_table():
+    input_mock.entered_text = '5'
+    bytecode = code2bc('целтаб а[1:5]\nввод а[1]\nвывод а[1]')
+    vm = create_vm(*bytecode)
+    vm.execute()
+    assert print_mock.printed_text == '5'
+
 def test_undef_target_input_error():
     input_mock.entered_text = '5'
     bytecode = code2bc('ввод а\nвывод а')

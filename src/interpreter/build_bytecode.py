@@ -106,7 +106,15 @@ class BytecodeBuilder:
         self.cur_inst_n += 1
 
     def _handle_input(self, stmt: Input, i: int) -> None:
-        self.cur_ns.append((stmt.lineno, Bytecode.INPUT, tuple(stmt.targets)))
+        targets = []
+        for target in stmt.targets:
+            if isinstance(target, str):
+                targets.append(target)
+            elif isinstance(target, GetItem):
+                for index in target.indexes:
+                    self.cur_ns.extend(self._expr_bc(stmt.lineno, index))
+                targets.append((target.table_name, len(target.indexes)))
+        self.cur_ns.append((stmt.lineno, Bytecode.INPUT, tuple(targets)))
         self.cur_inst_n += 1
 
     def _handle_alg_start(self, stmt: AlgStart, i: int) -> None:
