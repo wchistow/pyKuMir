@@ -343,7 +343,7 @@ class VM:
             raise RuntimeException(lineno, 'выход за границу таблицы')
         table_part[indexes[-1]] = value
 
-        self._save_var(lineno, table_type, var_name, Value(table_type, var.value))
+        self._save_var(lineno, var.typename, var_name, Value(var.typename, var.value))
 
     def _set_item_str(self, lineno: int, var_name: str, index: int,
                       value: Value, var: Value) -> None:
