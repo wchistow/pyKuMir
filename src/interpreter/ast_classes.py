@@ -106,3 +106,8 @@ class SetItem(Statement):
     table_name: str
     indexes: list[Expr]
     expr: Expr
+
+@dataclass
+class Slice(Statement):
+    name: str
+    indexes: list[Expr]

@@ -55,6 +55,7 @@ class VM:
             Bytecode.STOP: lambda inst: self.stop(),
             Bytecode.GET_ITEM: lambda inst: self.get_item(inst[0]),
             Bytecode.SET_ITEM: lambda inst: self.set_item(inst[0], *inst[2]),
+            Bytecode.MAKE_SLICE: lambda inst: self.slice(inst[0]),
         }
 
         self.INSTS_WITHOUT_INCREASE_COUNTER = {Bytecode.JUMP_TAG, Bytecode.JUMP_TAG_IF_FALSE,
@@ -386,6 +387,26 @@ class VM:
             self._save_var(lineno, var.typename, var_name, Value('лит', new_val))
         else:
             raise RuntimeException(lineno, f'нельзя "сим := {value.typename}"')
+
+    def slice(self, lineno: int) -> None:
+        end = self.stack.pop()
+        start = self.stack.pop()
+        if start.typename != 'цел' or end.typename != 'цел':
+            raise RuntimeException(lineno, 'индекс - не целое число')
+
+        var = self.stack.pop()
+        if var.typename != 'лит':
+            raise RuntimeException(lineno, 'лишние индексы')
+
+        if start.value > len(var.value) or end.value > len(var.value):
+            raise RuntimeException(lineno, 'индекс символа больше длины строки')
+
+        if start.value > end.value:
+            res = ''
+        else:
+            res = var.value[start.value-1:end.value]
+
+        self.stack.append(Value('лит', res))
 
     def _load_args(self, lineno: int, args: list[tuple[str, str, str]], n: int) -> Namespace:
         res: Namespace = {}

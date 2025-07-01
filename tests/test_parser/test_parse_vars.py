@@ -61,6 +61,23 @@ def test_var_with_space_in_name():
     parsed = parser.parse()
     assert parsed == [ast_classes.StoreVar(0, 'цел', ['а б'], [Value('цел', 5)])]
 
+def test_parse_slice():
+    code = 'вывод а[2:5]'
+    parser = Parser(code)
+    parsed = parser.parse()
+    assert parsed == [
+        ast_classes.Output(
+            lineno=0,
+            exprs=[[
+                ast_classes.Slice(
+                    lineno=1,
+                    name='а',
+                    indexes=[[Value(typename='цел', value=2)], [Value(typename='цел', value=5)]]
+                )
+            ]]
+        )
+    ]
+
 def test_keyword_in_name_error():
     parser = Parser('цел нач := 0')
     with pytest.raises(SyntaxException):

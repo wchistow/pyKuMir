@@ -4,7 +4,7 @@ from typing import Iterable
 from .ast_classes import (AlgStart, AlgEnd, Call, Input, IfStart, IfEnd, Statement,
                           StoreVar, Op, Output, ElseStart, LoopWithCountStart, LoopWithCountEnd,
                           LoopWhileStart, LoopWhileEnd, LoopForStart, LoopForEnd, LoopUntilStart,
-                          LoopUntilEnd, Exit, Assert, Stop, Expr, GetItem, SetItem)
+                          LoopUntilEnd, Exit, Assert, Stop, Expr, GetItem, SetItem, Slice)
 from .value import Value
 from .tokenizer import Tokenizer
 from .exceptions import SyntaxException
@@ -637,12 +637,24 @@ class Parser:
 
         return Call(self.line - 1, name, args)
 
-    def _parse_getitem(self, name: str):
+    def _parse_getitem(self, name: str) -> GetItem | Slice:
         self._next_token()
-        indexes = self._parse_table_item_indexes()
+        indexes = [self._parse_expr(in_getitem=True)]
+        res = GetItem(self.line, name, indexes)
+        if self.cur_token.kind == 'COLON':
+            self._next_token()
+            indexes.append(self._parse_expr(in_getitem=True))
+            res = Slice(self.line, name, indexes)
+        elif self.cur_token.kind == 'COMMA':
+            while self.cur_token.kind == 'COMMA':
+                self._next_token()
+                indexes.append(self._parse_expr(in_getitem=True))
+            res = GetItem(self.line, name, indexes)
+        elif self.cur_token.kind != 'NEWLINE':
+            raise SyntaxException(self.line, self.cur_token.value)
         if self.cur_token.kind != 'NEWLINE':
             raise SyntaxException(self.line, self.cur_token.value)
-        return GetItem(self.line, name, indexes)
+        return res
 
     def _parse_table_item_indexes(self) -> list[Expr]:
         indexes = [self._parse_expr(in_getitem=True)]

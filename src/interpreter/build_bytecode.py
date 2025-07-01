@@ -2,7 +2,7 @@ from .ast_classes import (StoreVar, Output, Op, AlgStart, AlgEnd, Call,
                           Input, IfStart, IfEnd, ElseStart, LoopWithCountStart,
                           LoopWithCountEnd, LoopWhileStart, LoopWhileEnd, Statement, LoopForStart,
                           LoopForEnd, Expr, LoopUntilStart, LoopUntilEnd, Exit, Assert, Stop,
-                          GetItem, SetItem)
+                          GetItem, SetItem, Slice)
 from .bytecode import Bytecode, BytecodeType
 from .value import Value
 
@@ -294,6 +294,13 @@ class BytecodeBuilder:
                     self.cur_ns.extend(self._expr_bc(v.lineno, index))
                     self.cur_ns.append((v.lineno, Bytecode.GET_ITEM, ()))
                     self.cur_inst_n += 1
+            elif isinstance(v, Slice):
+                self.cur_ns.append((v.lineno, Bytecode.LOAD_NAME, (v.name,)))
+                self.cur_inst_n += 1
+                for index in v.indexes:
+                    self.cur_ns.extend(self._expr_bc(v.lineno, index))
+                self.cur_ns.append((v.lineno, Bytecode.MAKE_SLICE, (v.name,)))
+                self.cur_inst_n += 1
             elif v.typename == 'get-name':
                 res.append((lineno, Bytecode.LOAD_NAME, (v.value,)))
             elif isinstance(v, Value):
