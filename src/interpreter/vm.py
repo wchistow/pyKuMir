@@ -320,17 +320,14 @@ class VM:
 
     def get_item(self, lineno: int) -> None:
         index = self.stack.pop()
-        if index.typename != 'цел':
-            raise RuntimeException(lineno, 'индекс - не целое число')
+        _check_index_type(lineno, index)
 
         var = self.stack.pop()
         if 'таб' in var.typename:
-            if index.value not in var.value:
-                raise RuntimeException(lineno, 'выход за границу таблицы')
+            _check_table_index(lineno, index.value, var.value)
             res = var.value[index.value]
         elif var.typename == 'лит':
-            if index.value > len(var.value):
-                raise RuntimeException(lineno, 'индекс символа больше длины строки')
+            _check_str_index(lineno, index, var.value)
             res = var.value[index.value - 1]
         else:
             raise RuntimeException(lineno, 'лишние индексы')
@@ -343,8 +340,7 @@ class VM:
         indexes: list[int] = []
         for _ in range(len_indexes):
             index = self.stack.pop()
-            if index.typename != 'цел':
-                raise RuntimeException(lineno, 'индекс - не целое число')
+            _check_index_type(lineno, index)
             indexes.append(index.value)
         indexes.reverse()
 
@@ -367,12 +363,10 @@ class VM:
 
         table_part = var.value
         for index in indexes[:-1]:
-            if index not in table_part:
-                raise RuntimeException(lineno, 'выход за границу таблицы')
+            _check_table_index(lineno, index, table_part)
             table_part = table_part[index]
 
-        if indexes[-1] not in table_part:
-            raise RuntimeException(lineno, 'выход за границу таблицы')
+        _check_table_index(lineno, indexes[-1], table_part)
         table_part[indexes[-1]] = value
 
         self._save_var(lineno, var.typename, var_name, Value(var.typename, var.value))
@@ -380,8 +374,6 @@ class VM:
     def _set_item_str(self, lineno: int, var_name: str, index: int,
                       value: Value, var: Value) -> None:
         if value.typename == 'сим' or (value.typename == 'лит' and len(value.value) == 1):
-            if index > len(var.value):
-                raise RuntimeException(lineno, 'индекс символа больше длины строки')
             new_val = var.value
             new_val = new_val[:index - 1] + value.value + new_val[index:]
             self._save_var(lineno, var.typename, var_name, Value('лит', new_val))
@@ -391,15 +383,13 @@ class VM:
     def slice(self, lineno: int) -> None:
         end = self.stack.pop()
         start = self.stack.pop()
-        if start.typename != 'цел' or end.typename != 'цел':
-            raise RuntimeException(lineno, 'индекс - не целое число')
 
         var = self.stack.pop()
         if var.typename != 'лит':
             raise RuntimeException(lineno, 'лишние индексы')
 
-        if start.value > len(var.value) or end.value > len(var.value):
-            raise RuntimeException(lineno, 'индекс символа больше длины строки')
+        _check_str_index(lineno, start, var.value)
+        _check_str_index(lineno, end, var.value)
 
         if start.value > end.value:
             res = ''
@@ -470,6 +460,25 @@ def _str_to_bool(v: str) -> bool:
 
 def _bool_to_str(b: bool) -> str:
     return 'да' if b else 'нет'
+
+
+def _check_str_index(lineno: int, index: Value, string: str) -> None:
+    _check_index_type(lineno, index)
+    val = index.value
+    if val > len(string):
+        raise RuntimeException(lineno, 'индекс символа больше длины строки')
+    if val < 0:
+        raise RuntimeException(lineno, 'отрицательный индекс')
+
+
+def _check_table_index(lineno: int, index: int, table: dict[int, Value | None]) -> None:
+    if index not in table:
+        raise RuntimeException(lineno, 'выход за границу таблицы')
+
+
+def _check_index_type(lineno: int, index: Value) -> None:
+    if index.typename != 'цел':
+        raise RuntimeException(lineno, 'индекс - не целое число')
 
 
 def _convert_string_to_type(lineno: int, string: str, var_type: str) -> Value:
