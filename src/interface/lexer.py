@@ -27,6 +27,7 @@ class KuMirLexer(RegexLexer):
                 bygroups(Name.Function, Whitespace, Punctuation)
             ),
             (r'"[^"\n]*"', String),
+            (r"'.'", String),
             (r'\b\d+', Number),
             (r'\|.*', Comment),
         ]
