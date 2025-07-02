@@ -22,6 +22,7 @@ class Bytecode(Enum):
     GET_ITEM = auto()
     SET_ITEM = auto()
     MAKE_SLICE = auto()
+    USE = auto()
 
 
 BytecodeType = tuple[int, Bytecode, tuple[Value | None | tuple[Value], ...]]

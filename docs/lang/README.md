@@ -7,6 +7,7 @@
   <li><a href="commands.md">Команды</a></li>
   <li><a href="comments.md">Комментарии</a></li>
   <li><a href="exprs.md">Вычисления</a></li>
+  <li><a href="builtins.md">Встроенные алгоритмы</a></li>
   <li><a href="tables.md">Таблицы</a></li>
   <li><a href="branching.md">Операторы ветвления</a></li>
   <li><a href="io.md">Ввод/вывод</a></li>

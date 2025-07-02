@@ -1,5 +1,8 @@
-from typing import Callable, TypeAlias
+from collections.abc import Callable
+from typing import TypeAlias
 
+from .actors import actors
+from .actors.base import KumirFunc, KumirValue
 from .bytecode import Bytecode, BytecodeType
 from .exceptions import RuntimeException
 from .value import Value
@@ -12,17 +15,29 @@ class VM:
                  bytecode: list[BytecodeType],
                  output_f: Callable[[str], None],
                  input_f: Callable[[], str],
-                 algs: dict[str, list[BytecodeType, list[int]]] | None = None) -> None:
+                 algs: dict[
+                           str,
+                           tuple[
+                               list[tuple[str, str, str]],
+                               str,
+                               str,
+                               list[list[BytecodeType], list[int]]
+                           ]
+                       ] | None = None) -> None:
         """
         :param bytecode: список команд байт-кода
         :param output_f: функция, в неё передаётся строка для вывода
         :param input_f: функция, вызывается для получения ввода пользователя
-        :param algs: словарь алгоритмов в программе (формата `имя: список команд байт-кода`)
+        :param algs: словарь алгоритмов в программе
         """
         self.output_f = output_f
         self.input_f = input_f
         self.bytecode = bytecode
         self.algs = algs or {}
+        self.actors_algs: dict[
+            str,
+            tuple[list[tuple[str, str, str]], str, Callable[[list[Value]], Value | None]]
+        ] = {}
 
         self.glob_vars: Namespace = {'нс': ('лит', Value('лит', '\n'))}
         self.stack: list[Value | None] = []
@@ -56,6 +71,7 @@ class VM:
             Bytecode.GET_ITEM: lambda inst: self.get_item(inst[0]),
             Bytecode.SET_ITEM: lambda inst: self.set_item(inst[0], *inst[2]),
             Bytecode.MAKE_SLICE: lambda inst: self.slice(inst[0]),
+            Bytecode.USE: lambda inst: self.use(inst[2][0]),
         }
 
         self.INSTS_WITHOUT_INCREASE_COUNTER = {Bytecode.JUMP_TAG, Bytecode.JUMP_TAG_IF_FALSE,
@@ -260,8 +276,7 @@ class VM:
         """
         if name in self.algs:
             alg = self.algs[name]
-            args = alg[0]
-            self.call_stack.append(self._load_args(lineno, args, args_n))
+            self.call_stack.append(self._load_args(lineno, alg[0], args_n))
             if alg[1]:  # ret_type
                 self.call_stack[-1][alg[2]] = (alg[1], None)
 
@@ -270,6 +285,13 @@ class VM:
             self.cur_algs.append(name)
             self.cur_algs_inst_n.append(0)
             self._execute(alg[3][0])
+        elif name in self.actors_algs:
+            alg = self.actors_algs[name]
+            args = self._load_args(lineno, alg[0], args_n)
+            py_args = [arg[1] for arg in args.values()]
+            ret_v = alg[2](py_args)
+            if alg[1]:  # ret_type
+                self.stack.append(ret_v)
         else:
             raise RuntimeException(lineno, f'имя "{name}" не определено')
 
@@ -397,6 +419,18 @@ class VM:
             res = var.value[start.value-1:end.value]
 
         self.stack.append(Value('лит', res))
+
+    def use(self, actor_name: str) -> None:
+        self._load_actors_vars(actors[actor_name].vars)
+        self._load_actors_algs(actors[actor_name].funcs)
+
+    def _load_actors_vars(self, actor_vars: dict[str, tuple[str, KumirValue]]) -> None:
+        for name, var in actor_vars.items():
+            self.glob_vars[name] = var
+
+    def _load_actors_algs(self, funcs: dict[str, KumirFunc]) -> None:
+        for name, func in funcs.items():
+            self.actors_algs[name] = (func.args, func.ret_type, func.py_func)
 
     def _load_args(self, lineno: int, args: list[tuple[str, str, str]], n: int) -> Namespace:
         res: Namespace = {}

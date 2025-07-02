@@ -1,3 +1,5 @@
+from collections.abc import Callable
+
 from .ast_classes import (StoreVar, Output, Op, AlgStart, AlgEnd, Call,
                           Input, IfStart, IfEnd, ElseStart, LoopWithCountStart,
                           LoopWithCountEnd, LoopWhileStart, LoopWhileEnd, Statement, LoopForStart,
@@ -41,7 +43,7 @@ class BytecodeBuilder:
         self.ifs: list[int] = []
         self.tags: dict[int, list[int]] = {}
 
-        self.HANDLERS = {
+        self.HANDLERS: dict[type[Statement], Callable[[Statement, int], None]] = {
             StoreVar: self._handle_store_var,
             Output: self._handle_output,
             Input: self._handle_input,
@@ -68,6 +70,7 @@ class BytecodeBuilder:
     def build(self, parsed_code: list[Statement]) -> tuple[list[BytecodeType], dict]:
         self.tags = _get_all_statements_tags(parsed_code)
 
+        self.bytecode.append((0, Bytecode.USE, ('__builtins__',)))
         for i, stmt in enumerate(parsed_code):
             if self.cur_alg is not None:
                 self.cur_ns = self.algs[self.cur_alg][3][0]

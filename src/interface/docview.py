@@ -14,6 +14,7 @@ class DocView(QWidget):
     PRETTY_NAMES = {
         'algs.md': 'Алгоритмы',
         'branching.md': 'Команды ветвления',
+        'builtins.md': 'Встроенные алгоритмы',
         'commands.md': 'Команды',
         'comments.md': 'Комментарии',
         'exprs.md': 'Вычисления',
