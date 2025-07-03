@@ -103,6 +103,12 @@ def test_slice():
     vm.execute()
     assert print_mock.printed_text == 'test'
 
+def test_not_name():
+    bytecode = code2bc('лог завтра дождь := да\nвывод завтра не дождь')
+    vm = create_vm(*bytecode)
+    vm.execute()
+    assert print_mock.printed_text == 'нет'
+
 def test_assign_to_not_defined_error():
     bytecode = code2bc('а := 5')
     vm = create_vm(*bytecode)
