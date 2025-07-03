@@ -54,7 +54,7 @@ class VM:
 
         self.CALL_TRANSITIONS = {
             Bytecode.LOAD_CONST: lambda inst: self.stack.append(inst[2][0]),
-            Bytecode.LOAD_NAME: lambda inst: self.stack.append(self.get_var(inst[0], inst[2][0])),
+            Bytecode.LOAD_NAME: lambda inst: self.load_name(inst[0], inst[2][0]),
             Bytecode.MAKE_TABLE: lambda inst: self.make_table(*inst[2]),
             Bytecode.BIN_OP: lambda inst: self.bin_op(inst[0], inst[2][0]),
             Bytecode.UNARY_OP: lambda inst: self.unary_op(inst[0], inst[2][0]),
@@ -118,6 +118,14 @@ class VM:
         else:  # объявление нескольких переменных (`цел а, б`)
             for name in names:
                 self._save_var(lineno, typename, name, None)
+
+    def load_name(self, lineno: int, name: str) -> None:
+        try:
+            var = self.get_var(lineno, name)
+        except RuntimeException:
+            self.call(lineno, name, 0)
+        else:
+            self.stack.append(var)
 
     def make_table(self, typename: str, length: int) -> None:
         indexes: list[tuple[int, int]] = []
