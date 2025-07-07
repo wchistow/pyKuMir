@@ -1,3 +1,4 @@
+import re
 from collections.abc import Callable
 from typing import TypeAlias
 
@@ -109,7 +110,7 @@ class VM:
         value = self.stack.pop()
         if typename is None:  # сохранение значения в уже объявленную переменную
             if not self._var_defined(names[0]):
-                raise RuntimeException(lineno, f'имя "{names[0]}" не объявлено')
+                raise RuntimeException(lineno, f'имя "{names[0]}" не определено')
             var = self._get_all_namespaces()[names[0]]
             self._save_var(lineno, var[0], names[0], value)
             return
@@ -122,8 +123,15 @@ class VM:
     def load_name(self, lineno: int, name: str) -> None:
         try:
             var = self.get_var(lineno, name)
-        except RuntimeException:
-            self.call(lineno, name, 0)
+        except RuntimeException as e1:
+            if re.fullmatch(r'имя "[\w ]+" не определено \(строка \d+\)',
+                            e1.args[0]) is not None:
+                try:
+                    self.call(lineno, name, 0)
+                except RuntimeException as e2:
+                    raise e2 from None
+            else:
+                raise e1 from None
         else:
             self.stack.append(var)
 
@@ -235,7 +243,7 @@ class VM:
                     target_var = self._get_all_namespaces()[target]
                 except KeyError:
                     raise RuntimeException(lineno,
-                                           f'имя "{target}" не объявлено') from None
+                                           f'имя "{target}" не определено') from None
                 target_var_type = target_var[0]
                 target_var_name = target
             else:
@@ -472,12 +480,12 @@ class VM:
         :param lineno: номер текущей строки кода
         :param name: имя переменной
         :return: экземпляр класса `Value` - значение переменной
-        :raise: RuntimeException - если имя не объявлено
+        :raise: RuntimeException - если имя не определено
         """
         var = _find_var_in_namespace(lineno, name, self._get_all_namespaces())
         if var is not None:
             return var
-        raise RuntimeException(lineno, f'имя "{name}" не объявлено')
+        raise RuntimeException(lineno, f'имя "{name}" не определено')
 
     def _var_defined(self, name: str) -> bool:
         """

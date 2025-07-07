@@ -629,6 +629,8 @@ class Parser:
 
     def _parse_call(self, name: str) -> Call:
         self._next_token()
+        if self.cur_token.value == ')':
+            raise SyntaxException(self.line, self.cur_token.value, 'пусто между "(" и ")"')
         args = [self._parse_expr(in_alg_call=True)]
 
         while self.cur_token.kind == 'COMMA':

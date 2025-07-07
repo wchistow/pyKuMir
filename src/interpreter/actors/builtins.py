@@ -177,11 +177,11 @@ class Builtins(Actor):
         time.sleep(x / 1000)
 
     @staticmethod
-    def _cur_time(args: list[KumirValue]) -> KumirValue:
+    def _cur_time(_: list[KumirValue]) -> KumirValue:
         now = datetime.now()
         seconds_since_midnight = (now - now.replace(hour=0, minute=0,
                                                     second=0, microsecond=0)).total_seconds()
-        return KumirValue('цел', int(seconds_since_midnight))
+        return KumirValue('цел', int(seconds_since_midnight * 1000))
 
     funcs = {
         'abs': KumirFunc(_abs, 'вещ', [('арг', 'вещ', 'x')]),
