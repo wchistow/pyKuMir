@@ -85,7 +85,7 @@ class BytecodeBuilder:
 
         return self.bytecode, self.algs
 
-    def _handle_store_var(self, stmt: StoreVar, i: int) -> None:
+    def _handle_store_var(self, stmt: StoreVar, _: int) -> None:
         if stmt.typename is not None and 'таб' in stmt.typename:
             for name, value in zip(stmt.names, stmt.value):
                 for indexes in value[::-1]:
@@ -103,13 +103,13 @@ class BytecodeBuilder:
         self.cur_ns.append((stmt.lineno, Bytecode.STORE, (stmt.typename, stmt.names)))
         self.cur_inst_n += 1
 
-    def _handle_output(self, stmt: Output, i: int) -> None:
+    def _handle_output(self, stmt: Output, _: int) -> None:
         for expr in stmt.exprs:
             self.cur_ns.extend(self._expr_bc(stmt.lineno, expr))
         self.cur_ns.append((stmt.lineno, Bytecode.OUTPUT, (len(stmt.exprs),)))
         self.cur_inst_n += 1
 
-    def _handle_input(self, stmt: Input, i: int) -> None:
+    def _handle_input(self, stmt: Input, _: int) -> None:
         targets = []
         for target in stmt.targets:
             if isinstance(target, str):
@@ -121,21 +121,21 @@ class BytecodeBuilder:
         self.cur_ns.append((stmt.lineno, Bytecode.INPUT, tuple(targets)))
         self.cur_inst_n += 1
 
-    def _handle_alg_start(self, stmt: AlgStart, i: int) -> None:
+    def _handle_alg_start(self, stmt: AlgStart, _: int) -> None:
         self.algs[stmt.name] = (stmt.args, stmt.ret_type, stmt.ret_name, [[], []])
         self.cur_alg = stmt.name
         if stmt.is_main:
             self.main_alg = stmt.name
         self.cur_inst_n = 0
 
-    def _handle_alg_end(self, stmt: AlgEnd, i: int) -> None:
+    def _handle_alg_end(self, stmt: AlgEnd, _: int) -> None:
         self.cur_ns.append((stmt.lineno, Bytecode.RET, ()))
         self.cur_inst_n += 1
         self.algs[self.cur_alg][3][1] = self.cur_tags[:]
         self.cur_tags.clear()
         self.cur_alg = None
 
-    def _handle_call(self, stmt: Call, i: int) -> None:
+    def _handle_call(self, stmt: Call, _: int) -> None:
         for arg in stmt.args:
             self.cur_ns.extend(self._expr_bc(stmt.lineno, arg))
         self.cur_ns.append((stmt.lineno, Bytecode.CALL, (stmt.alg_name, len(stmt.args))))
@@ -147,12 +147,12 @@ class BytecodeBuilder:
         self.cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG_IF_FALSE, (self.tags[i][0],)))
         self.cur_inst_n += 1
 
-    def _handle_else_start(self, stmt: ElseStart, i: int) -> None:
+    def _handle_else_start(self, stmt: ElseStart, _: int) -> None:
         self.cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG, (self.tags[self.ifs.pop()][1],)))
         self.cur_inst_n += 1
         self.cur_tags.append(self.cur_inst_n)
 
-    def _handle_if_end(self, stmt: IfEnd, i: int) -> None:
+    def _handle_if_end(self, _: IfEnd, __: int) -> None:
         self.cur_tags.append(self.cur_inst_n)
 
     def _handle_loop_with_count_start(self, stmt: LoopWithCountStart, i: int) -> None:
@@ -164,7 +164,7 @@ class BytecodeBuilder:
         self.cur_inst_n += 2
         self.cur_tags.append(self.cur_inst_n)
 
-    def _handle_loop_with_count_end(self, stmt: LoopWithCountEnd, i: int) -> None:
+    def _handle_loop_with_count_end(self, stmt: LoopWithCountEnd, _: int) -> None:
         stmt_tags = self.tags[self.loops_with_count_indexes[-1]]
         self.cur_tags.append(self.cur_inst_n)
         self.cur_ns.extend(self._loop_with_count_cond(stmt.lineno,
@@ -181,7 +181,7 @@ class BytecodeBuilder:
         self.cur_inst_n += 1
         self.cur_tags.append(self.cur_inst_n)
 
-    def _handle_loop_while_end(self, stmt: LoopWhileEnd, i: int) -> None:
+    def _handle_loop_while_end(self, stmt: LoopWhileEnd, _: int) -> None:
         stmt_tags = self.tags[self.loops_while_indexes.pop()]
         self.cur_tags.append(self.cur_inst_n)
         self.cur_ns.extend(self._expr_bc(stmt.lineno, self.loops_while_stmts.pop()))
@@ -201,7 +201,7 @@ class BytecodeBuilder:
         self.cur_inst_n += 4
         self.cur_tags.append(self.cur_inst_n)
 
-    def _handle_loop_for_end(self, stmt: LoopForEnd, i: int) -> None:
+    def _handle_loop_for_end(self, stmt: LoopForEnd, _: int) -> None:
         stmt_tags = self.tags[self.loops_for_indexes.pop()]
         loop = self.loops_for.pop()
         self.cur_tags.append(self.cur_inst_n)
@@ -211,18 +211,18 @@ class BytecodeBuilder:
         self.cur_inst_n += 2
         self.cur_tags.append(self.cur_inst_n)
 
-    def _handle_loop_until_start(self, stmt: LoopUntilStart, i: int) -> None:
+    def _handle_loop_until_start(self, _: LoopUntilStart, i: int) -> None:
         self.loops_until_indexes.append(i)
         self.cur_tags.append(self.cur_inst_n)
 
-    def _handle_loop_until_end(self, stmt: LoopUntilEnd, i: int) -> None:
+    def _handle_loop_until_end(self, stmt: LoopUntilEnd, _: int) -> None:
         stmt_tags = self.tags[self.loops_until_indexes.pop()]
         self.cur_ns.extend(self._expr_bc(stmt.lineno, stmt.cond))
         self.cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG_IF_TRUE, (stmt_tags[0],)))
         self.cur_inst_n += 1
         self.cur_tags.append(self.cur_inst_n)
 
-    def _handle_exit(self, stmt: Exit, i: int) -> None:
+    def _handle_exit(self, stmt: Exit, _: int) -> None:
         loops = (self.loops_with_count_indexes + self.loops_while_indexes +
                  self.loops_for_indexes + self.loops_until_indexes)
         if loops:
@@ -234,16 +234,16 @@ class BytecodeBuilder:
             self.cur_ns.append((stmt.lineno, Bytecode.RET, ()))
             self.cur_inst_n += 1
 
-    def _handle_assert(self, stmt: Assert, i: int) -> None:
+    def _handle_assert(self, stmt: Assert, _: int) -> None:
         self.cur_ns.extend(self._expr_bc(stmt.lineno, stmt.expr))
         self.cur_ns.append((stmt.lineno, Bytecode.ASSERT, ()))
         self.cur_inst_n += 1
 
-    def _handle_stop(self, stmt: Stop, i: int) -> None:
+    def _handle_stop(self, stmt: Stop, _: int) -> None:
         self.cur_ns.append((stmt.lineno, Bytecode.STOP, ()))
         self.cur_inst_n += 1
 
-    def _handle_set_item(self, stmt: SetItem, i: int) -> None:
+    def _handle_set_item(self, stmt: SetItem, _: int) -> None:
         self.cur_ns.extend(self._expr_bc(stmt.lineno, stmt.expr))
         for index in stmt.indexes:
             self.cur_ns.extend(self._expr_bc(stmt.lineno, index))
