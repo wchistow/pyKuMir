@@ -1,6 +1,7 @@
 import re
 from collections.abc import Callable
-from typing import TypeAlias
+from pathlib import Path
+from typing import TypeAlias, Any
 
 from .actors import actors
 from .actors.base import KumirFunc, KumirValue
@@ -24,7 +25,10 @@ class VM:
                                str,
                                list[list[BytecodeType], list[int]]
                            ]
-                       ] | None = None) -> None:
+                       ] | None = None,
+                 work_dir: str = Path.home() / 'Kumir',
+                 cur_dir: str | None = None,
+                 cur_file: str | None = None) -> None:
         """
         :param bytecode: список команд байт-кода
         :param output_f: функция, в неё передаётся строка для вывода
@@ -37,8 +41,17 @@ class VM:
         self.algs = algs or {}
         self.actors_algs: dict[
             str,
-            tuple[list[tuple[str, str, str]], str, Callable[[list[Value]], Value | None]]
+            tuple[
+                list[tuple[str, str, str]],
+                str,
+                Callable[[list[Value]], Value | None] |
+                Callable[[list[KumirValue], Any], KumirValue | None]
+            ]
         ] = {}
+
+        self.work_dir = work_dir
+        self.cur_dir = cur_dir
+        self.cur_file = cur_file
 
         self.glob_vars: Namespace = {'нс': ('лит', Value('лит', '\n'))}
         self.stack: list[Value | None] = []
@@ -221,10 +234,19 @@ class VM:
         Обрабатывает инструкцию OUTPUT
         :param exprs_num: количество выражений, которых нужно вывести (они загружаются из стека)
         """
-        exprs = [self.stack.pop() for _ in range(exprs_num)]
+        to_file = None
+        exprs = [self.stack.pop() for _ in range(exprs_num)][::-1]
+        if exprs[0].typename == 'файл':
+            to_file = exprs[0].value
+            exprs = exprs[1:]
         if any('таб' in expr.typename for expr in exprs):
             raise RuntimeException(lineno, 'нет индексов у таблицы')
-        self.output_f(''.join(map(lambda e: str(e.value), exprs[::-1])))
+
+        text = ''.join(map(lambda e: str(e.value), exprs))
+        if to_file is None:
+            self.output_f(text)
+        else:
+            to_file.write(text)
 
     def input(self, lineno: int, targets: list[str | tuple[str, int]]) -> None:
         """
@@ -232,29 +254,26 @@ class VM:
         :param lineno: номер текущей строки кода
         :param targets: список имён переменных, в которые необходимо записать ввод пользователя
         """
+        from_file: str | None = None
+
         cur_target_i = 0
         while cur_target_i < len(targets):
             indexes = []
-            inputted = self.input_f()
             target = targets[cur_target_i]
 
-            if isinstance(target, str):
-                try:
-                    target_var = self._get_all_namespaces()[target]
-                except KeyError:
-                    raise RuntimeException(lineno,
-                                           f'имя "{target}" не определено') from None
-                target_var_type = target_var[0]
-                target_var_name = target
+            (target_var, target_var_type,
+             target_var_name, new_indexes) = self._get_target(lineno, target)
+            indexes.extend(new_indexes)
+
+            if cur_target_i == 0 and target_var_type == 'файл':
+                from_file = target_var[1].value
+                cur_target_i += 1
+                continue
+
+            if from_file is None:
+                inputted = self.input_f()
             else:
-                target_var_name = target[0]
-                for _ in range(target[1]):
-                    index = self.stack.pop()
-                    if index.typename != 'цел':
-                        raise RuntimeException(lineno, 'индекс - не целое число')
-                    indexes.append(index.value)
-                target_var = self._get_all_namespaces()[target_var_name]
-                target_var_type = target_var[0].removesuffix('таб')
+                inputted = from_file.read()
 
             if target_var_type == 'лит':
                 self._save_inputted(lineno, target_var_type, target_var_name,
@@ -263,17 +282,43 @@ class VM:
                 cur_target_i += 1
             elif 'таб' in target_var_type:
                 self._save_inputted(lineno, target_var_type, target_var_name,
-                                    _convert_string_to_type(lineno, inputted, target_var_type),
+                                    _convert_string_to_type(lineno, inputted,
+                                                            target_var_type.removesuffix('таб')),
                                     indexes)
                 cur_target_i += 1
             else:
                 for text in inputted.split(' '):
                     if cur_target_i >= len(targets):
                         break
+                    target = targets[cur_target_i]
+                    (target_var, target_var_type,
+                     target_var_name, new_indexes) = self._get_target(lineno, target)
                     self._save_inputted(lineno, target_var_type, target_var_name,
                                         _convert_string_to_type(lineno, text, target_var_type),
                                         indexes)
                     cur_target_i += 1
+
+    def _get_target(self, lineno: int, target: str | tuple[str, int]):
+        indexes = []
+        if isinstance(target, str):
+            try:
+                target_var = self._get_all_namespaces()[target]
+            except KeyError:
+                raise RuntimeException(lineno,
+                                       f'имя "{target}" не определено') from None
+            target_var_type = target_var[0]
+            target_var_name = target
+        else:
+            target_var_name = target[0]
+            for _ in range(target[1]):
+                index = self.stack.pop()
+                if index.typename != 'цел':
+                    raise RuntimeException(lineno, 'индекс - не целое число')
+                indexes.append(index.value)
+            target_var = self._get_all_namespaces()[target_var_name]
+            target_var_type = target_var[0]
+
+        return target_var, target_var_type, target_var_name, indexes
 
     def _save_inputted(self, lineno: int, var_type: str, var_name: str,
                        value: Value, indexes: list[int]) -> None:
@@ -305,7 +350,10 @@ class VM:
             alg = self.actors_algs[name]
             args = self._load_args(lineno, alg[0], args_n)
             py_args = [arg[1] for arg in args.values()]
-            ret_v = alg[2](py_args)
+            try:
+                ret_v = alg[2](py_args, **self._get_extra_args(name))
+            except RuntimeException as e:
+                raise RuntimeException(lineno, ' '.join(e.args[0].split()[:-2])) from None
             if alg[1]:  # ret_type
                 self.stack.append(ret_v)
         else:
@@ -502,6 +550,14 @@ class VM:
         if self.call_stack:
             res |= self.call_stack[-1]
         return res
+
+    def _get_extra_args(self, name: str) -> dict[str, ...]:
+        extra_args = {}
+        if name in ('РАБОЧИЙ КАТАЛОГ', 'создать каталог', 'полный путь'):
+            extra_args['work_dir'] = self.work_dir
+        elif name == 'КАТАЛОГ ПРОГРАММЫ':
+            extra_args['prog_dir'] = self.cur_dir
+        return extra_args
 
 
 def _str_to_bool(v: str) -> bool:

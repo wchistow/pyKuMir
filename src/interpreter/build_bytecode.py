@@ -71,6 +71,7 @@ class BytecodeBuilder:
         self.tags = _get_all_statements_tags(parsed_code)
 
         self.bytecode.append((0, Bytecode.USE, ('__builtins__',)))
+        self.bytecode.append((0, Bytecode.USE, ('Файлы',)))
         for i, stmt in enumerate(parsed_code):
             if self.cur_alg is not None:
                 self.cur_ns = self.algs[self.cur_alg][3][0]

@@ -6,8 +6,18 @@ from .console import Console
 
 
 class Runner:
-    def __init__(self, console: Console):
+    def __init__(
+            self,
+            console: Console,
+            work_dir: str | None = None,
+            cur_dir: str | None = None,
+            cur_file: str | None = None
+    ):
         self.console = console
+
+        self.work_dir = work_dir
+        self.cur_dir = cur_dir
+        self.cur_file = cur_file
 
     def _output(self, s: str):
         self.console.output.emit(s)
@@ -27,7 +37,10 @@ class Runner:
             vm = VM(bytecode=bc[0],
                     output_f=self._output,
                     input_f=self._input,
-                    algs=bc[1])
+                    algs=bc[1],
+                    work_dir=self.work_dir,
+                    cur_dir=self.cur_dir,
+                    cur_file=self.cur_file)
             try:
                 vm.execute()
             except RuntimeException as e:

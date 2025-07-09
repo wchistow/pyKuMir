@@ -1,3 +1,5 @@
+import os.path
+from pathlib import Path
 from threading import Thread
 from sys import getdefaultencoding
 from platform import python_version, python_implementation, platform
@@ -28,10 +30,13 @@ class MainWindow(QWidget):
         super().__init__(parent)
         self.ABOUT = f'pyKuMir v{program_version}\n{ABOUT}'
 
+        self.work_dir = Path.home() / 'Kumir'
+        if not os.path.exists(self.work_dir):
+            os.mkdir(self.work_dir)
+
         self.cur_file: str | None = None
         self.unsaved_changes = False
 
-        self.update_title()
         self.resize(800, 600)
 
         self.docview = DocView()
@@ -60,7 +65,7 @@ class MainWindow(QWidget):
 
         self.codeinput = CodeInput(self)
         self.codeinput.textChanged.connect(self.new_unsaved_changes)
-        self.codeinput.textChanged.connect(self.update_title)
+        self.codeinput.textChanged.connect(self.update_file)
 
         self.console = Console(self)
 
@@ -77,6 +82,8 @@ class MainWindow(QWidget):
         self.grid.addWidget(self.code_and_console, 1, 0, 7, 1)
 
         self.setMinimumSize(600, 500)
+
+        self.update_file()
 
         self.setLayout(self.grid)
 
@@ -98,16 +105,20 @@ class MainWindow(QWidget):
     def new_unsaved_changes(self):
         self.unsaved_changes = True
 
-    def update_title(self):
+    def update_file(self):
         self.setWindowTitle(f'{self.cur_file if self.cur_file is not None else "Новая программа"}'
                             f'{"*" if self.unsaved_changes else ""} - pyKuMir')
+
+        self.runner.work_dir = self.work_dir
+        self.runner.cur_dir = os.path.dirname(self.cur_file) if self.cur_file is not None else None
+        self.runner.cur_file = self.cur_file
 
     def new_program(self):
         if not self.unsaved_changes:
             self.cur_file = None
             self.codeinput.clear()
             self.unsaved_changes = False
-            self.update_title()
+            self.update_file()
         else:
             self.ask_to_save_or_close('Закрытие текста')
 
@@ -128,7 +139,7 @@ class MainWindow(QWidget):
         if ask_window.clickedButton() == save_button:
             self.save_file()
             self.unsaved_changes = False
-            self.update_title()
+            self.update_file()
         elif ask_window.clickedButton() == reject_button:
             return 'reject_close'
         elif ask_window.clickedButton() == no_save_button:
@@ -136,7 +147,7 @@ class MainWindow(QWidget):
             self.codeinput.clear()
             self.unsaved_changes = False
 
-        self.update_title()
+        self.update_file()
 
     def open_file(self):
         if self.unsaved_changes:
@@ -155,19 +166,19 @@ class MainWindow(QWidget):
             with open(self.cur_file, 'w', encoding='utf-8') as f:
                 f.write(self.codeinput.toPlainText())
             self.unsaved_changes = False
-            self.update_title()
+            self.update_file()
         else:
             self.save_file_as()
 
     def save_file_as(self):
-        new_file = QFileDialog.getSaveFileName(self, 'Сохранить файл', '',
+        new_file = QFileDialog.getSaveFileName(self, 'Сохранить файл', str(self.work_dir),
                                                'Файлы КуМир (*.kum);;Все файлы (*)')
         if new_file[0]:
             self.cur_file = new_file[0]
             with open(self.cur_file, 'w', encoding='utf-8') as f:
                 f.write(self.codeinput.toPlainText())
             self.unsaved_changes = False
-            self.update_title()
+            self.update_file()
 
     def show_about(self):
         QMessageBox.information(self, 'О программе', self.ABOUT,
