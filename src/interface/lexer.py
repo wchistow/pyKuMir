@@ -20,11 +20,19 @@ class KuMirLexer(RegexLexer):
     tokens = {
         'root': [
             (words(TYPES, prefix=r'\b', suffix=r'\b'), Keyword.Type),
-            (words(KEYWORDS - BOOLS, prefix=r'\b', suffix=r'\b'), Keyword),
+            (words(KEYWORDS - BOOLS - {'использовать'}, prefix=r'\b', suffix=r'\b'), Keyword),
             (words(BOOLS, prefix=r'\b', suffix=r'\b'), Keyword.Constant),
             (
-                r'(\w+)(\s*)(\()',
+                r'(\w)([ ]*)(\()',
                 bygroups(Name.Function, Whitespace, Punctuation)
+            ),
+            (
+                r'(использовать)([ ]+)(Файлы)',
+                bygroups(Keyword, Whitespace, Name.Namespace)
+            ),
+            (
+                r'(использовать)',
+                bygroups(Keyword)
             ),
             (r'"[^"\n]*"', String),
             (r"'.'", String),

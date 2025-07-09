@@ -4,7 +4,7 @@ from .ast_classes import (StoreVar, Output, Op, AlgStart, AlgEnd, Call,
                           Input, IfStart, IfEnd, ElseStart, LoopWithCountStart,
                           LoopWithCountEnd, LoopWhileStart, LoopWhileEnd, Statement, LoopForStart,
                           LoopForEnd, Expr, LoopUntilStart, LoopUntilEnd, Exit, Assert, Stop,
-                          GetItem, SetItem, Slice)
+                          GetItem, SetItem, Slice, Use)
 from .bytecode import Bytecode, BytecodeType
 from .value import Value
 
@@ -34,6 +34,8 @@ class BytecodeBuilder:
         self.main_alg: str | None = None
         self.last_line = 0
 
+        self._actors = {'Файлы'}
+
         self.loops_with_count_indexes: list[int] = []
         self.loops_while_indexes: list[int] = []
         self.loops_while_stmts: list[Expr] = []
@@ -44,6 +46,7 @@ class BytecodeBuilder:
         self.tags: dict[int, list[int]] = {}
 
         self.HANDLERS: dict[type[Statement], Callable[[Statement, int], None]] = {
+            Use: self._handle_use,
             StoreVar: self._handle_store_var,
             Output: self._handle_output,
             Input: self._handle_input,
@@ -84,6 +87,12 @@ class BytecodeBuilder:
             self.bytecode.append((self.last_line, Bytecode.CALL, (self.main_alg, 0)))
 
         return self.bytecode, self.algs
+
+    def _handle_use(self, stmt: Use, _: int) -> None:
+        name = stmt.name
+        if name not in self._actors:
+            self.bytecode.append((stmt.lineno, Bytecode.USE, (name,)))
+            self._actors.add(name)
 
     def _handle_store_var(self, stmt: StoreVar, _: int) -> None:
         if stmt.typename is not None and 'таб' in stmt.typename:

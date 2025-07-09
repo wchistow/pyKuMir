@@ -10,6 +10,10 @@ class Statement:
     lineno: int
 
 @dataclass
+class Use(Statement):
+    name: str
+
+@dataclass
 class Output(Statement):
     exprs: list[Expr]
 

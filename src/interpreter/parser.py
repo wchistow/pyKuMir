@@ -4,7 +4,7 @@ from typing import Iterable
 from .ast_classes import (AlgStart, AlgEnd, Call, Input, IfStart, IfEnd, Statement,
                           StoreVar, Op, Output, ElseStart, LoopWithCountStart, LoopWithCountEnd,
                           LoopWhileStart, LoopWhileEnd, LoopForStart, LoopForEnd, LoopUntilStart,
-                          LoopUntilEnd, Exit, Assert, Stop, Expr, GetItem, SetItem, Slice)
+                          LoopUntilEnd, Exit, Assert, Stop, Expr, GetItem, SetItem, Slice, Use)
 from .value import Value
 from .tokenizer import Tokenizer
 from .exceptions import SyntaxException
@@ -213,7 +213,9 @@ class Parser:
         return kind, typename, name
 
     def _handle_statement(self) -> None:
-        if self.cur_token.kind == 'TYPE':  # объявление переменной(ых)
+        if self.cur_token.value == 'использовать' and Env.INTRODUCTION in self.envs:
+            self._handle_use()
+        elif self.cur_token.kind == 'TYPE':  # объявление переменной(ых)
             self._handle_var_def()
         elif self.cur_token.value == 'вывод':
             self._handle_output()
@@ -268,6 +270,17 @@ class Parser:
                 raise SyntaxException(self.line, self.cur_token.value)
         elif self.cur_token.kind != 'NEWLINE':
             raise SyntaxException(self.line, self.cur_token.value)
+
+    def _handle_use(self) -> None:
+        self._next_token()
+        if self.cur_token.kind != 'NAME':
+            raise SyntaxException(self.line, self.cur_token.value)
+        name = self.cur_token.value
+        self._next_token()
+        if self.cur_token.kind != 'NEWLINE':
+            raise SyntaxException(self.line, self.cur_token.value)
+
+        self.res.append(Use(self.line, name))
 
     def _handle_var_def(self) -> None:
         typename = self.cur_token.value
