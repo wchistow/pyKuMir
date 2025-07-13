@@ -23,8 +23,8 @@ class KuMirLexer(RegexLexer):
             (words(KEYWORDS - BOOLS - {'использовать'}, prefix=r'\b', suffix=r'\b'), Keyword),
             (words(BOOLS, prefix=r'\b', suffix=r'\b'), Keyword.Constant),
             (
-                r'(\w)([ ]*)(\()',
-                bygroups(Name.Function, Whitespace, Punctuation)
+                r'([\w ]+)(\()',
+                bygroups(Name.Function, Punctuation)
             ),
             (
                 r'(использовать)([ ]+)(Файлы)',
