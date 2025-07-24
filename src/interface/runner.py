@@ -7,11 +7,11 @@ from .console import Console
 
 class Runner:
     def __init__(
-            self,
-            console: Console,
-            work_dir: str | None = None,
-            cur_dir: str | None = None,
-            cur_file: str | None = None
+        self,
+        console: Console,
+        work_dir: str | None = None,
+        cur_dir: str | None = None,
+        cur_file: str | None = None,
     ):
         self.console = console
 
@@ -34,13 +34,15 @@ class Runner:
         except SyntaxException as e:
             print(e.args)
         else:
-            vm = VM(bytecode=bc[0],
-                    output_f=self._output,
-                    input_f=self._input,
-                    algs=bc[1],
-                    work_dir=self.work_dir,
-                    cur_dir=self.cur_dir,
-                    cur_file=self.cur_file)
+            vm = VM(
+                bytecode=bc[0],
+                output_f=self._output,
+                input_f=self._input,
+                algs=bc[1],
+                work_dir=self.work_dir,
+                cur_dir=self.cur_dir,
+                cur_file=self.cur_file,
+            )
             try:
                 vm.execute()
             except RuntimeException as e:

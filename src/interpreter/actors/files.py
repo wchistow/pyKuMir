@@ -9,7 +9,7 @@ class Files(Actor):
         ('cp-1251', 'cp1251', 'windows-1251', 'windows1251', 'windows'): 'cp1251',
         ('cp-866', 'cp866', 'ibm-866', 'ibm866', 'dos'): 'cp866',
         ('koi8-r', 'koi8r', 'koi8', 'кои8', 'кои8-р', 'кои8-р'): 'koi8_r',
-        ('utf-8', 'utf8', 'utf', 'linux'): 'utf-8'
+        ('utf-8', 'utf8', 'utf', 'linux'): 'utf-8',
     }
     encoding = 'utf-8'
 

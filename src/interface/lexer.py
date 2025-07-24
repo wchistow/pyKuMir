@@ -3,14 +3,21 @@ import os.path
 from pygments import highlight
 from pygments.formatters import HtmlFormatter
 from pygments.lexer import RegexLexer, words, bygroups
-from pygments.token import Comment, Keyword, Number, String, Name, Whitespace, Punctuation
+from pygments.token import (
+    Comment,
+    Keyword,
+    Number,
+    String,
+    Name,
+    Whitespace,
+    Punctuation,
+)
 
 from interpreter.constants import KEYWORDS, TYPES
 
 BOOLS = {'да', 'нет'}
 
-with open(os.path.join(os.path.dirname(__file__), 'code_style.css'),
-          encoding='utf-8') as f:
+with open(os.path.join(os.path.dirname(__file__), 'code_style.css'), encoding='utf-8') as f:
     CSS = f'<style>\n{f.read()}\n</style>'
 
 
@@ -20,20 +27,17 @@ class KuMirLexer(RegexLexer):
     tokens = {
         'root': [
             (words(TYPES, prefix=r'\b', suffix=r'\b'), Keyword.Type),
-            (words(KEYWORDS - BOOLS - {'использовать'}, prefix=r'\b', suffix=r'\b'), Keyword),
-            (words(BOOLS, prefix=r'\b', suffix=r'\b'), Keyword.Constant),
             (
-                r'([\w ]+)(\()',
-                bygroups(Name.Function, Punctuation)
+                words(KEYWORDS - BOOLS - {'использовать'}, prefix=r'\b', suffix=r'\b'),
+                Keyword,
             ),
+            (words(BOOLS, prefix=r'\b', suffix=r'\b'), Keyword.Constant),
+            (r'([\w ]+)(\()', bygroups(Name.Function, Punctuation)),
             (
                 r'(использовать)([ ]+)(Файлы)',
-                bygroups(Keyword, Whitespace, Name.Namespace)
+                bygroups(Keyword, Whitespace, Name.Namespace),
             ),
-            (
-                r'(использовать)',
-                bygroups(Keyword)
-            ),
+            (r'(использовать)', bygroups(Keyword)),
             (r'"[^"\n]*"', String),
             (r"'.'", String),
             (r'\b\d+', Number),
@@ -51,10 +55,10 @@ def highlight_text_without_css(text: str) -> str:
 
 
 if __name__ == '__main__':
-    code = '''
+    code = """
     алг fib(арг цел n) нач
         вывод n
-    кон'''
+    кон"""
 
     print(repr(highlight_text(code)))
     # lexer = KuMirLexer()

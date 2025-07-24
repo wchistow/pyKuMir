@@ -9,7 +9,11 @@ PATH_TO_SRC = Path(__file__).parent.parent.parent.absolute() / 'src'
 sys.path.append(str(PATH_TO_SRC.absolute()))
 
 interpreter = importlib.import_module('interpreter')
-code2bc, RuntimeException, VM = interpreter.code2bc, interpreter.RuntimeException, interpreter.VM
+code2bc, RuntimeException, VM = (
+    interpreter.code2bc,
+    interpreter.RuntimeException,
+    interpreter.VM,
+)
 
 print_mock = PrintMock()
 
@@ -23,7 +27,7 @@ def setup_function(func) -> None:
 
 
 def test_switch():
-    bc = code2bc('''
+    bc = code2bc("""
     алг нач
         цел а := 1
         выбор
@@ -33,7 +37,7 @@ def test_switch():
             иначе вывод "что-то другое"
         все
     кон
-    ''')
+    """)
     vm = create_vm(*bc)
     vm.execute()
 

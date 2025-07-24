@@ -11,7 +11,11 @@ PATH_TO_SRC = Path(__file__).parent.parent.parent.absolute() / 'src'
 sys.path.append(str(PATH_TO_SRC.absolute()))
 
 interpreter = importlib.import_module('interpreter')
-code2bc, RuntimeException, VM = interpreter.code2bc, interpreter.RuntimeException, interpreter.VM
+code2bc, RuntimeException, VM = (
+    interpreter.code2bc,
+    interpreter.RuntimeException,
+    interpreter.VM,
+)
 
 input_mock = InputMock()
 print_mock = PrintMock()
@@ -23,7 +27,7 @@ def create_vm(bc, algs):
 
 def setup_function(func):
     input_mock.entered_text = ''
-    print_mock.printed_text =''
+    print_mock.printed_text = ''
 
 
 def test_simple_input():
@@ -33,12 +37,14 @@ def test_simple_input():
     vm.execute()
     assert print_mock.printed_text == '5'
 
+
 def test_input_string():
     input_mock.entered_text = 'привет, мир!'
     bytecode = code2bc('лит а\nввод а\nвывод а')
     vm = create_vm(*bytecode)
     vm.execute()
     assert print_mock.printed_text == 'привет, мир!'
+
 
 def test_input_bool():
     input_mock.entered_text = 'да'
@@ -47,12 +53,14 @@ def test_input_bool():
     vm.execute()
     assert print_mock.printed_text == 'да'
 
+
 def test_input_char():
     input_mock.entered_text = 'а'
     bytecode = code2bc('сим а\nввод а\nвывод а')
     vm = create_vm(*bytecode)
     vm.execute()
     assert print_mock.printed_text == 'а'
+
 
 def test_input_to_table():
     input_mock.entered_text = '5'
@@ -61,12 +69,14 @@ def test_input_to_table():
     vm.execute()
     assert print_mock.printed_text == '5'
 
+
 def test_undef_target_input_error():
     input_mock.entered_text = '5'
     bytecode = code2bc('ввод а\nвывод а')
     vm = create_vm(*bytecode)
     with pytest.raises(RuntimeException):
         vm.execute()
+
 
 def test_input_string_to_int_error():
     input_mock.entered_text = 'тест'
@@ -75,12 +85,14 @@ def test_input_string_to_int_error():
     with pytest.raises(RuntimeException):
         vm.execute()
 
+
 def test_input_string_to_float_error():
     input_mock.entered_text = 'тест'
     bytecode = code2bc('вещ а\nввод а\nвывод а')
     vm = create_vm(*bytecode)
     with pytest.raises(RuntimeException):
         vm.execute()
+
 
 def test_input_string_to_char_error():
     input_mock.entered_text = 'тест'

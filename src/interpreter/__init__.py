@@ -5,10 +5,19 @@ from .bytecode import BytecodeType
 from .exceptions import SyntaxException, RuntimeException
 from .vm import VM
 
-__all__ = ['build_bytecode', 'Parser', 'SyntaxException', 'RuntimeException', 'VM', 'pretty_print_bc']
+__all__ = [
+    'build_bytecode',
+    'Parser',
+    'SyntaxException',
+    'RuntimeException',
+    'VM',
+    'pretty_print_bc',
+]
 
 
-def code2bc(code: str) -> tuple[list[BytecodeType], dict[str, list[BytecodeType, list[int]]]]:
+def code2bc(
+    code: str,
+) -> tuple[list[BytecodeType], dict[str, list[BytecodeType, list[int]]]]:
     p = Parser(code)
     return build_bytecode(p.parse())
 
@@ -32,5 +41,4 @@ def pretty_print_bc(bc: list[BytecodeType], algs: dict) -> None:
         tags = alg[3][1]
         for i, inst in enumerate(alg[3][0]):
             cur_tags = [str(index) for index, tag in enumerate(tags) if tag == i]
-            print(f'    {",".join(cur_tags) + (":" if cur_tags else ""):4}'
-                  f'{inst[0]:2}  {inst[1].name:20} {inst[2]}')
+            print(f'    {",".join(cur_tags) + (":" if cur_tags else ""):4}{inst[0]:2}  {inst[1].name:20} {inst[2]}')

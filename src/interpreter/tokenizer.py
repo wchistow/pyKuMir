@@ -5,23 +5,23 @@ from typing import Iterator
 from .constants import TYPES, KEYWORDS
 
 TOKEN_SPECIFICATION = [
-    ('COMMENT',       r'\|.*'),
-    ('STRING',        r'"[^"\n]*"'),
-    ('CHAR',          r"'.'"),
-    ('NUMBER',        r'\d+(\.\d*)?'),
+    ('COMMENT', r'\|.*'),
+    ('STRING', r'"[^"\n]*"'),
+    ('CHAR', r"'.'"),
+    ('NUMBER', r'\d+(\.\d*)?'),
     # В Python <= 3.11 символов `\` в f-строках быть не может
-    ('TYPE',          r'(\b' + r'\b|\b'.join(TYPES) + r'\b)'),
-    ('KEYWORD',       r'(\b' + r'\b|\b'.join(KEYWORDS) + r'\b)'),
-    ('OP',            r'(\*\*|\+|\-|\*|/|>=|<=|<>|>|<|\(|\)|\bили\b|\bи\b|\bне\b)'),
+    ('TYPE', r'(\b' + r'\b|\b'.join(TYPES) + r'\b)'),
+    ('KEYWORD', r'(\b' + r'\b|\b'.join(KEYWORDS) + r'\b)'),
+    ('OP', r'(\*\*|\+|\-|\*|/|>=|<=|<>|>|<|\(|\)|\bили\b|\bи\b|\bне\b)'),
     ('TABLE_BRACKET', r'(\[|\])'),
-    ('NAME',          r'[A-Za-zА-Яа-я_][A-Za-zА-Яа-я_0-9]*'),
-    ('ASSIGN',        r':='),
-    ('EQ',            r'='),
-    ('COLON',         r':'),
-    ('COMMA',         r','),
-    ('NEWLINE',       r'[\n;]'),
-    ('SKIP',          r'[ \t]+'),
-    ('OTHER',         r'.'),
+    ('NAME', r'[A-Za-zА-Яа-я_][A-Za-zА-Яа-я_0-9]*'),
+    ('ASSIGN', r':='),
+    ('EQ', r'='),
+    ('COLON', r':'),
+    ('COMMA', r','),
+    ('NEWLINE', r'[\n;]'),
+    ('SKIP', r'[ \t]+'),
+    ('OTHER', r'.'),
 ]
 TOK_REGEX = '|'.join(f'(?P<{name}>{regex})' for name, regex in TOKEN_SPECIFICATION)
 

@@ -6,4 +6,4 @@ __pycache__/
 .ropeproject
 
 uv.lock
-test.py
+test.*

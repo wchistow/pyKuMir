@@ -13,8 +13,7 @@ __all__ = ['Actor', 'KumirValue', 'KumirFunc', 'KumirRuntimeException']
 
 @dataclass
 class KumirFunc:
-    py_func: (Callable[[list[KumirValue]], KumirValue | None] |
-              Callable[[list[KumirValue], Any], KumirValue | None])
+    py_func: Callable[[list[KumirValue]], KumirValue | None] | Callable[[list[KumirValue], Any], KumirValue | None]
     ret_type: str = ''
     #                kind,type,name
     args: list[tuple[str, str, str]] = field(default_factory=list)

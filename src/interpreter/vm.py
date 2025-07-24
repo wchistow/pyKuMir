@@ -13,22 +13,25 @@ Namespace: TypeAlias = dict[str, tuple[str, Value | None]]
 
 
 class VM:
-    def __init__(self,
-                 bytecode: list[BytecodeType],
-                 output_f: Callable[[str], None],
-                 input_f: Callable[[], str],
-                 algs: dict[
-                     str,
-                     tuple[
-                         list[tuple[str, str, str]],
-                         str,
-                         str,
-                         list[list[BytecodeType], list[int]]
-                     ]
-                 ] | None = None,
-                 work_dir: str = Path.home() / 'Kumir',
-                 cur_dir: str | None = None,
-                 cur_file: str | None = None) -> None:
+    def __init__(
+        self,
+        bytecode: list[BytecodeType],
+        output_f: Callable[[str], None],
+        input_f: Callable[[], str],
+        algs: dict[
+            str,
+            tuple[
+                list[tuple[str, str, str]],
+                str,
+                str,
+                list[list[BytecodeType], list[int]],
+            ],
+        ]
+        | None = None,
+        work_dir: str = Path.home() / 'Kumir',
+        cur_dir: str | None = None,
+        cur_file: str | None = None,
+    ) -> None:
         """
         :param bytecode: список команд байт-кода
         :param output_f: функция, в неё передаётся строка для вывода
@@ -44,9 +47,8 @@ class VM:
             tuple[
                 list[tuple[str, str, str]],
                 str,
-                Callable[[list[Value]], Value | None] |
-                Callable[[list[KumirValue], Any], KumirValue | None]
-            ]
+                Callable[[list[Value]], Value | None] | Callable[[list[KumirValue], Any], KumirValue | None],
+            ],
         ] = {}
 
         self.work_dir = work_dir
@@ -89,8 +91,11 @@ class VM:
             Bytecode.USE: lambda inst: self.use(inst[2][0]),
         }
 
-        self.INSTS_WITHOUT_INCREASE_COUNTER = {Bytecode.JUMP_TAG, Bytecode.JUMP_TAG_IF_FALSE,
-                                               Bytecode.JUMP_TAG_IF_TRUE}
+        self.INSTS_WITHOUT_INCREASE_COUNTER = {
+            Bytecode.JUMP_TAG,
+            Bytecode.JUMP_TAG_IF_FALSE,
+            Bytecode.JUMP_TAG_IF_TRUE,
+        }
 
     def execute(self) -> None:
         self._execute(self.bytecode)
@@ -120,13 +125,11 @@ class VM:
         if self.cur_algs:
             for arg in self.algs[self.cur_algs[-1]][0]:
                 if arg[0] == 'арг' and arg[2] in names:
-                    raise RuntimeException(
-                        lineno, 'нельзя присвоить аргументу')
+                    raise RuntimeException(lineno, 'нельзя присвоить аргументу')
         value = self.stack.pop()
         if typename is None:  # сохранение значения в уже объявленную переменную
             if not self._var_defined(names[0]):
-                raise RuntimeException(
-                    lineno, f'имя "{names[0]}" не определено')
+                raise RuntimeException(lineno, f'имя "{names[0]}" не определено')
             var = self._get_all_namespaces()[names[0]]
             self._save_var(lineno, var[0], names[0], value)
             return
@@ -140,8 +143,7 @@ class VM:
         try:
             var = self.get_var(lineno, name)
         except RuntimeException as e1:
-            if re.fullmatch(r'имя "[\w ]+" не определено \(строка \d+\)',
-                            e1.args[0]) is not None:
+            if re.fullmatch(r'имя "[\w ]+" не определено \(строка \d+\)', e1.args[0]) is not None:
                 try:
                     self.call(lineno, name, 0)
                 except RuntimeException as e2:
@@ -157,13 +159,13 @@ class VM:
             last_i = self.stack.pop().value
             first_i = self.stack.pop().value
             indexes.append((first_i, last_i))
-        self.stack.append(
-            Value(typename, self._build_table(indexes, len(indexes))))
+        self.stack.append(Value(typename, self._build_table(indexes, len(indexes))))
 
     def _build_table(self, indexes: list[tuple[int, int]], depth: int):
         start_i, last_i = indexes[0]
-        return {i: None if depth == 1 else self._build_table(indexes[1:], depth - 1)
-                for i in range(start_i, last_i+1)}
+        return {
+            i: None if depth == 1 else self._build_table(indexes[1:], depth - 1) for i in range(start_i, last_i + 1)
+        }
 
     def bin_op(self, lineno: int, op: str) -> None:
         """
@@ -181,14 +183,12 @@ class VM:
         elif sorted((a.typename, b.typename)) == ['лит', 'сим']:
             typename = 'лит'
         elif a.typename != b.typename:
-            raise RuntimeException(
-                lineno, f'нельзя "{b.typename} {op} {a.typename}"')
+            raise RuntimeException(lineno, f'нельзя "{b.typename} {op} {a.typename}"')
 
         if op == '+' and a.typename in ('цел', 'вещ', 'лит'):
             self.stack.append(Value(typename, b.value + a.value))
         elif op == '+' and a.typename in ('сим', 'лит'):
-            self.stack.append(Value('лит', b.value + a.value)
-                              )  # <сим> + <сим> = <лит>
+            self.stack.append(Value('лит', b.value + a.value))  # <сим> + <сим> = <лит>
         elif op == '-' and a.typename in ('цел', 'вещ'):
             self.stack.append(Value(typename, b.value - a.value))
         elif op == '*' and a.typename in ('цел', 'вещ'):
@@ -196,7 +196,7 @@ class VM:
         elif op == '/' and a.typename in ('цел', 'вещ'):
             self.stack.append(Value('вещ', b.value / a.value))
         elif op == '**' and a.typename in ('цел', 'вещ'):
-            self.stack.append(Value(typename, b.value ** a.value))
+            self.stack.append(Value(typename, b.value**a.value))
         elif op == '>=' and a.typename in ('цел', 'вещ'):
             self.stack.append(Value('лог', _bool_to_str(b.value >= a.value)))
         elif op == '<=' and a.typename in ('цел', 'вещ'):
@@ -210,26 +210,18 @@ class VM:
         elif op == '<':
             self.stack.append(Value('лог', _bool_to_str(b.value < a.value)))
         elif op == 'или' and typename == 'лог':
-            self.stack.append(Value(
-                'лог',
-                _bool_to_str(_str_to_bool(b.value) or _str_to_bool(a.value)))
-            )
+            self.stack.append(Value('лог', _bool_to_str(_str_to_bool(b.value) or _str_to_bool(a.value))))
         elif op == 'и' and typename == 'лог':
-            self.stack.append(Value(
-                'лог',
-                _bool_to_str(_str_to_bool(b.value) and _str_to_bool(a.value)))
-            )
+            self.stack.append(Value('лог', _bool_to_str(_str_to_bool(b.value) and _str_to_bool(a.value))))
         else:
-            raise RuntimeException(
-                lineno, f'нельзя "{b.typename} {op} {a.typename}"')
+            raise RuntimeException(lineno, f'нельзя "{b.typename} {op} {a.typename}"')
 
     def unary_op(self, lineno: int, op: str) -> None:
         a = self.stack.pop()
         if op == 'не':
             if a.typename != 'лог':
                 raise RuntimeException(lineno, f'нельзя "не {a.typename}"')
-            self.stack.append(
-                Value('лог', _bool_to_str(not _str_to_bool(a.value))))
+            self.stack.append(Value('лог', _bool_to_str(not _str_to_bool(a.value))))
         elif op in ('+', '-'):
             if a.typename not in ('цел', 'вещ'):
                 raise RuntimeException(lineno, f'нельзя "{op}{a.typename}"')
@@ -271,8 +263,7 @@ class VM:
             indexes = []
             target = targets[cur_target_i]
 
-            (target_var, target_var_type,
-             target_var_name, new_indexes) = self._get_target(lineno, target)
+            (target_var, target_var_type, target_var_name, new_indexes) = self._get_target(lineno, target)
             indexes.extend(new_indexes)
 
             if cur_target_i == 0 and target_var_type == 'файл':
@@ -286,28 +277,36 @@ class VM:
                 inputted = from_file.read()
 
             if target_var_type == 'лит':
-                self._save_inputted(lineno, target_var_type, target_var_name,
-                                    _convert_string_to_type(
-                                        lineno, inputted, target_var_type),
-                                    indexes)
+                self._save_inputted(
+                    lineno,
+                    target_var_type,
+                    target_var_name,
+                    _convert_string_to_type(lineno, inputted, target_var_type),
+                    indexes,
+                )
                 cur_target_i += 1
             elif 'таб' in target_var_type:
-                self._save_inputted(lineno, target_var_type, target_var_name,
-                                    _convert_string_to_type(lineno, inputted,
-                                                            target_var_type.removesuffix('таб')),
-                                    indexes)
+                self._save_inputted(
+                    lineno,
+                    target_var_type,
+                    target_var_name,
+                    _convert_string_to_type(lineno, inputted, target_var_type.removesuffix('таб')),
+                    indexes,
+                )
                 cur_target_i += 1
             else:
                 for text in inputted.split(' '):
                     if cur_target_i >= len(targets):
                         break
                     target = targets[cur_target_i]
-                    (target_var, target_var_type,
-                     target_var_name, new_indexes) = self._get_target(lineno, target)
-                    self._save_inputted(lineno, target_var_type, target_var_name,
-                                        _convert_string_to_type(
-                                            lineno, text, target_var_type),
-                                        indexes)
+                    (target_var, target_var_type, target_var_name, new_indexes) = self._get_target(lineno, target)
+                    self._save_inputted(
+                        lineno,
+                        target_var_type,
+                        target_var_name,
+                        _convert_string_to_type(lineno, text, target_var_type),
+                        indexes,
+                    )
                     cur_target_i += 1
 
     def _get_target(self, lineno: int, target: str | tuple[str, int]):
@@ -316,8 +315,7 @@ class VM:
             try:
                 target_var = self._get_all_namespaces()[target]
             except KeyError:
-                raise RuntimeException(lineno,
-                                       f'имя "{target}" не определено') from None
+                raise RuntimeException(lineno, f'имя "{target}" не определено') from None
             target_var_type = target_var[0]
             target_var_name = target
         else:
@@ -332,8 +330,14 @@ class VM:
 
         return target_var, target_var_type, target_var_name, indexes
 
-    def _save_inputted(self, lineno: int, var_type: str, var_name: str,
-                       value: Value, indexes: list[int]) -> None:
+    def _save_inputted(
+        self,
+        lineno: int,
+        var_type: str,
+        var_name: str,
+        value: Value,
+        indexes: list[int],
+    ) -> None:
         if indexes:
             var = self._get_all_namespaces()[var_name][1]
             self._set_item_table(lineno, var_name, indexes, value, var)
@@ -365,8 +369,7 @@ class VM:
             try:
                 ret_v = alg[2](py_args, **self._get_extra_args(name))
             except RuntimeException as e:
-                raise RuntimeException(lineno, ' '.join(
-                    e.args[0].split()[:-2])) from None
+                raise RuntimeException(lineno, ' '.join(e.args[0].split()[:-2])) from None
             if alg[1]:  # ret_type
                 self.stack.append(ret_v)
         else:
@@ -380,8 +383,7 @@ class VM:
             if ret_v is not None:
                 self.stack.append(ret_v)
             else:
-                raise RuntimeException(
-                    lineno, 'функция должна возвращать значение')
+                raise RuntimeException(lineno, 'функция должна возвращать значение')
 
         self.cur_algs.pop()
         self.cur_algs_inst_n.pop()
@@ -435,8 +437,7 @@ class VM:
             raise RuntimeException(lineno, 'лишние индексы')
 
         if res is None:
-            raise RuntimeException(
-                lineno, 'значение элемента таблицы не определено')
+            raise RuntimeException(lineno, 'значение элемента таблицы не определено')
         self.stack.append(res)
 
     def set_item(self, lineno: int, name: str, len_indexes: int) -> None:
@@ -458,12 +459,10 @@ class VM:
         else:
             raise RuntimeException(lineno, 'лишние индексы')
 
-    def _set_item_table(self, lineno: int, var_name: str, indexes: list[int],
-                        value: Value, var: Value) -> None:
+    def _set_item_table(self, lineno: int, var_name: str, indexes: list[int], value: Value, var: Value) -> None:
         table_type = var.typename.removesuffix('таб')
         if table_type != value.typename:
-            raise RuntimeException(
-                lineno, f'нельзя "{table_type} := {value.typename}"')
+            raise RuntimeException(lineno, f'нельзя "{table_type} := {value.typename}"')
 
         table_part = var.value
         for index in indexes[:-1]:
@@ -473,16 +472,13 @@ class VM:
         _check_table_index(lineno, indexes[-1], table_part)
         table_part[indexes[-1]] = value
 
-        self._save_var(lineno, var.typename, var_name,
-                       Value(var.typename, var.value))
+        self._save_var(lineno, var.typename, var_name, Value(var.typename, var.value))
 
-    def _set_item_str(self, lineno: int, var_name: str, index: int,
-                      value: Value, var: Value) -> None:
+    def _set_item_str(self, lineno: int, var_name: str, index: int, value: Value, var: Value) -> None:
         if value.typename == 'сим' or (value.typename == 'лит' and len(value.value) == 1):
             new_val = var.value
-            new_val = new_val[:index - 1] + value.value + new_val[index:]
-            self._save_var(lineno, var.typename, var_name,
-                           Value('лит', new_val))
+            new_val = new_val[: index - 1] + value.value + new_val[index:]
+            self._save_var(lineno, var.typename, var_name, Value('лит', new_val))
         else:
             raise RuntimeException(lineno, f'нельзя "сим := {value.typename}"')
 
@@ -500,7 +496,7 @@ class VM:
         if start.value > end.value:
             res = ''
         else:
-            res = var.value[start.value-1:end.value]
+            res = var.value[start.value - 1 : end.value]
 
         self.stack.append(Value('лит', res))
 
@@ -541,8 +537,7 @@ class VM:
         if value_type == typename:  # типы целевой переменной и значения совпадают
             namespace[name] = (typename, value)
         else:
-            raise RuntimeException(lineno, message=f'нельзя "{
-                                   typename} := {value_type}"')
+            raise RuntimeException(lineno, message=f'нельзя "{typename} := {value_type}"')
 
     def get_var(self, lineno: int, name: str) -> Value:
         """
@@ -619,14 +614,12 @@ def _convert_string_to_type(lineno: int, string: str, var_type: str) -> Value:
         try:
             return Value('цел', int(string))
         except ValueError:
-            raise RuntimeException(
-                lineno, 'ошибка ввода целого числа') from None
+            raise RuntimeException(lineno, 'ошибка ввода целого числа') from None
     elif var_type == 'вещ':
         try:
             return Value('вещ', float(string))
         except ValueError:
-            raise RuntimeException(
-                lineno, 'ошибка ввода вещественного числа') from None
+            raise RuntimeException(lineno, 'ошибка ввода вещественного числа') from None
     elif var_type == 'лог':
         return Value('лог', string)
     elif var_type == 'лит':

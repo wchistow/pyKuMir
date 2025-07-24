@@ -5,8 +5,17 @@ from sys import getdefaultencoding
 from platform import python_version, python_implementation, platform
 
 from PyQt6.QtGui import QKeySequence
-from PyQt6.QtWidgets import (QWidget, QMenuBar, QMenu, QSplitter, QGridLayout,
-                             QMessageBox, QToolBar, QToolButton, QFileDialog)
+from PyQt6.QtWidgets import (
+    QWidget,
+    QMenuBar,
+    QMenu,
+    QSplitter,
+    QGridLayout,
+    QMessageBox,
+    QToolBar,
+    QToolButton,
+    QFileDialog,
+)
 from PyQt6.QtCore import Qt, QT_VERSION_STR, PYQT_VERSION_STR
 
 from .codeinput import CodeInput
@@ -14,7 +23,7 @@ from .console import Console
 from .docview import DocView
 from .runner import Runner
 
-ABOUT = f'''
+ABOUT = f"""
 Версия Python: {python_version()}
 Реализация: {python_implementation()}
 Платформа: {platform()}
@@ -22,7 +31,7 @@ ABOUT = f'''
 
 Версия Qt: {QT_VERSION_STR}
 Версия PyQt: {PYQT_VERSION_STR}
-'''
+"""
 
 
 class MainWindow(QWidget):
@@ -106,8 +115,10 @@ class MainWindow(QWidget):
         self.unsaved_changes = True
 
     def update_file(self):
-        self.setWindowTitle(f'{self.cur_file if self.cur_file is not None else "Новая программа"}'
-                            f'{"*" if self.unsaved_changes else ""} - pyKuMir')
+        self.setWindowTitle(
+            f'{self.cur_file if self.cur_file is not None else "Новая программа"}'
+            f'{"*" if self.unsaved_changes else ""} - pyKuMir'
+        )
 
         self.runner.work_dir = self.work_dir
         self.runner.cur_dir = os.path.dirname(self.cur_file) if self.cur_file is not None else None
@@ -126,8 +137,10 @@ class MainWindow(QWidget):
         ask_window = QMessageBox()
         ask_window.setWindowTitle(title)
         ask_window.setIcon(QMessageBox.Icon.Question)
-        ask_window.setText('В этом файле были проведены несохранённые изменения.\n'
-                           'При закрытии эти изменения будут потеряны.\nСохранить их?')
+        ask_window.setText(
+            'В этом файле были проведены несохранённые изменения.\n'
+            'При закрытии эти изменения будут потеряны.\nСохранить их?'
+        )
 
         reject_button = ask_window.addButton('Отменить закрытие', QMessageBox.ButtonRole.RejectRole)
         no_save_button = ask_window.addButton('Не сохранять', QMessageBox.ButtonRole.NoRole)
@@ -153,8 +166,7 @@ class MainWindow(QWidget):
         if self.unsaved_changes:
             self.ask_to_save_or_close('Открытие другого файла')
 
-        new_file = QFileDialog.getOpenFileName(self, 'Загрузить файл', '',
-                                               'Файлы КуМир (*.kum);;Все файлы (*)')
+        new_file = QFileDialog.getOpenFileName(self, 'Загрузить файл', '', 'Файлы КуМир (*.kum);;Все файлы (*)')
         self.cur_file = new_file[0]
         with open(self.cur_file, encoding='utf-8') as f:
             self.codeinput.setPlainText(f.read())
@@ -171,8 +183,12 @@ class MainWindow(QWidget):
             self.save_file_as()
 
     def save_file_as(self):
-        new_file = QFileDialog.getSaveFileName(self, 'Сохранить файл', str(self.work_dir),
-                                               'Файлы КуМир (*.kum);;Все файлы (*)')
+        new_file = QFileDialog.getSaveFileName(
+            self,
+            'Сохранить файл',
+            str(self.work_dir),
+            'Файлы КуМир (*.kum);;Все файлы (*)',
+        )
         if new_file[0]:
             self.cur_file = new_file[0]
             with open(self.cur_file, 'w', encoding='utf-8') as f:
@@ -181,8 +197,7 @@ class MainWindow(QWidget):
             self.update_file()
 
     def show_about(self):
-        QMessageBox.information(self, 'О программе', self.ABOUT,
-                                QMessageBox.StandardButton.Ok)
+        QMessageBox.information(self, 'О программе', self.ABOUT, QMessageBox.StandardButton.Ok)
 
     def run_code(self):
         if self.runner_thread is not None:

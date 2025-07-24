@@ -15,7 +15,7 @@ print_mock = PrintMock()
 
 
 def create_vm(bc, algs):
-    return VM(bc, output_f=print_mock.print, input_f = lambda: None, algs=algs)
+    return VM(bc, output_f=print_mock.print, input_f=lambda: None, algs=algs)
 
 
 def setup_function(func):
@@ -28,17 +28,20 @@ def test_output_simple_text():
     vm.execute()
     assert print_mock.printed_text == 'привет'
 
+
 def test_output_expr():
     bytecode = code2bc('вывод 5 + 6')
     vm = create_vm(*bytecode)
     vm.execute()
     assert print_mock.printed_text == '11'
 
+
 def test_output_with_newline():
     bytecode = code2bc('вывод "привет", нс')
     vm = create_vm(*bytecode)
     vm.execute()
     assert print_mock.printed_text == 'привет\n'
+
 
 def test_output_many_exprs():
     bytecode = code2bc('вывод "привет", ", мир!"')

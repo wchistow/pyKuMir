@@ -4,8 +4,14 @@ import re
 from pathlib import Path
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import (QWidget, QSplitter, QGridLayout,
-                             QTreeWidget, QTreeWidgetItem, QTextBrowser)
+from PyQt6.QtWidgets import (
+    QWidget,
+    QSplitter,
+    QGridLayout,
+    QTreeWidget,
+    QTreeWidgetItem,
+    QTextBrowser,
+)
 
 from .lexer import CSS, highlight_text_without_css
 
@@ -23,7 +29,7 @@ class DocView(QWidget):
         'prog_struct.md': 'Структура программы',
         'README.md': 'Содержание',
         'tables.md': 'Таблицы',
-        'vars.md': 'Переменные'
+        'vars.md': 'Переменные',
     }
 
     def __init__(self, parent=None):
@@ -46,8 +52,7 @@ class DocView(QWidget):
             item.setText(0, self.PRETTY_NAMES[f])
             item.setData(1, 0, os.path.join(self.base_dir, 'docs', 'lang', f))
             self.tree.addTopLevelItem(item)
-            if item.data(1, 0) == os.path.join(self.base_dir, 'docs',
-                                                            'lang', 'README.md'):
+            if item.data(1, 0) == os.path.join(self.base_dir, 'docs', 'lang', 'README.md'):
                 self.tree.setCurrentItem(item)
         self.tree.selectionModel().selectionChanged.connect(self.on_selection_changed)
 
@@ -68,9 +73,8 @@ class DocView(QWidget):
 
     def on_selection_changed(self):
         with open(
-                os.path.join(self.base_dir, 'docs', 'lang',
-                             self.tree.selectedItems()[0].data(1, 0)),
-                encoding='utf-8'
+            os.path.join(self.base_dir, 'docs', 'lang', self.tree.selectedItems()[0].data(1, 0)),
+            encoding='utf-8',
         ) as f:
             self.view.setHtml(_prepare(f.read(), self.base_dir))
 
@@ -111,9 +115,8 @@ def _links_from_relative_to_absolute(text: str, base_dir: Path) -> str:
     for line in text.split('\n'):
         if line.strip().startswith('<li><a href='):
             start, filename, end = line.split('"')
-            full_filename = os.path.join(base_dir, "docs", "lang", filename)
-            res.append(f'{start}"file://{"/" if platform == "win32" else ""}'
-                       f'{full_filename}"{end}')
+            full_filename = os.path.join(base_dir, 'docs', 'lang', filename)
+            res.append(f'{start}"file://{"/" if platform == "win32" else ""}{full_filename}"{end}')
         else:
             res.append(line)
     return '\n'.join(res)

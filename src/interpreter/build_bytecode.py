@@ -1,31 +1,59 @@
 from collections.abc import Callable
 
-from .ast_classes import (StoreVar, Output, Op, AlgStart, AlgEnd, Call,
-                          Input, IfStart, IfEnd, ElseStart, LoopWithCountStart,
-                          LoopWithCountEnd, LoopWhileStart, LoopWhileEnd, Statement, LoopForStart,
-                          LoopForEnd, Expr, LoopUntilStart, LoopUntilEnd, Exit, Assert, Stop,
-                          GetItem, SetItem, Slice, Use)
+from .ast_classes import (
+    StoreVar,
+    Output,
+    Op,
+    AlgStart,
+    AlgEnd,
+    Call,
+    Input,
+    IfStart,
+    IfEnd,
+    ElseStart,
+    LoopWithCountStart,
+    LoopWithCountEnd,
+    LoopWhileStart,
+    LoopWhileEnd,
+    Statement,
+    LoopForStart,
+    LoopForEnd,
+    Expr,
+    LoopUntilStart,
+    LoopUntilEnd,
+    Exit,
+    Assert,
+    Stop,
+    GetItem,
+    SetItem,
+    Slice,
+    Use,
+)
 from .bytecode import Bytecode, BytecodeType
 from .value import Value
 
 
 def build_bytecode(
-        parsed_code: list
-                   ) -> tuple[list[BytecodeType], dict[str, list[list[BytecodeType], list[int]]]]:
+    parsed_code: list,
+) -> tuple[list[BytecodeType], dict[str, list[list[BytecodeType], list[int]]]]:
     builder = BytecodeBuilder()
     return builder.build(parsed_code)
 
 
 class BytecodeBuilder:
     """Преобразует АСД в байт-код."""
+
     def __init__(self) -> None:
         self.bytecode: list[BytecodeType] = []
-        self.algs: dict[str,
-                        tuple[
-                            list[tuple[str, str, str]],
-                            str, str,
-                            list[list[BytecodeType], list[int]]
-                        ]] = {}
+        self.algs: dict[
+            str,
+            tuple[
+                list[tuple[str, str, str]],
+                str,
+                str,
+                list[list[BytecodeType], list[int]],
+            ],
+        ] = {}
         self.cur_tags: list[int] = []
         self.cur_alg: str | None = None
         self.cur_inst_n = 0
@@ -176,8 +204,7 @@ class BytecodeBuilder:
     def _handle_loop_with_count_end(self, stmt: LoopWithCountEnd) -> None:
         stmt_tags = self.tags[self.loops_with_count_indexes[-1]]
         self.cur_tags.append(self.cur_inst_n)
-        self.cur_ns.extend(self._loop_with_count_cond(stmt.lineno,
-                                                      str(self.loops_with_count_indexes.pop())))
+        self.cur_ns.extend(self._loop_with_count_cond(stmt.lineno, str(self.loops_with_count_indexes.pop())))
         self.cur_ns.append((stmt.lineno, Bytecode.JUMP_TAG_IF_TRUE, (stmt_tags[0],)))
         self.cur_inst_n += 2
         self.cur_tags.append(self.cur_inst_n)
@@ -232,8 +259,9 @@ class BytecodeBuilder:
         self.cur_tags.append(self.cur_inst_n)
 
     def _handle_exit(self, stmt: Exit) -> None:
-        loops = (self.loops_with_count_indexes + self.loops_while_indexes +
-                 self.loops_for_indexes + self.loops_until_indexes)
+        loops = (
+            self.loops_with_count_indexes + self.loops_while_indexes + self.loops_for_indexes + self.loops_until_indexes
+        )
         if loops:
             last_loop_i = max(loops)
             loop_tags = self.tags[last_loop_i]
@@ -267,7 +295,7 @@ class BytecodeBuilder:
             (lineno, Bytecode.STORE, (None, (loop_name,))),
             (lineno, Bytecode.LOAD_NAME, (loop_name,)),
             (lineno, Bytecode.LOAD_CONST, (Value('цел', -1),)),
-            (lineno, Bytecode.BIN_OP, ('>',))
+            (lineno, Bytecode.BIN_OP, ('>',)),
         ]
         self.cur_inst_n += 7
         return res
@@ -280,7 +308,7 @@ class BytecodeBuilder:
             (lineno, Bytecode.STORE, (None, (target,))),
             (lineno, Bytecode.LOAD_NAME, (target,)),
             *self._expr_bc(lineno, to_expr),
-            (lineno, Bytecode.BIN_OP, ('<=',))
+            (lineno, Bytecode.BIN_OP, ('<=',)),
         ]
         self.cur_inst_n += 5
         return res

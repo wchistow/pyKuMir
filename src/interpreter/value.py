@@ -3,6 +3,7 @@ from typing import Optional, Union, TextIO
 
 Table = dict[Optional['Value']]
 
+
 @dataclass
 class Value:
     typename: str

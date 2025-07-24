@@ -15,7 +15,7 @@ print_mock = PrintMock()
 
 
 def create_vm(bc, algs):
-    return VM(bc, output_f=print_mock.print, input_f = lambda: None, algs=algs)
+    return VM(bc, output_f=print_mock.print, input_f=lambda: None, algs=algs)
 
 
 def setup_function(func):
@@ -23,11 +23,11 @@ def setup_function(func):
 
 
 def test_stop():
-    bc = code2bc('''
+    bc = code2bc("""
     вывод 1, нс
     стоп
     вывод 2, нс
-    ''')
+    """)
     vm = create_vm(*bc)
     vm.execute()
     assert print_mock.printed_text == '1\nСТОП.'

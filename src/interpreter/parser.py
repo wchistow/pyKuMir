@@ -1,9 +1,34 @@
 from enum import auto, Enum
 
-from .ast_classes import (AlgStart, AlgEnd, Call, Input, IfStart, IfEnd, Statement,
-                          StoreVar, Op, Output, ElseStart, LoopWithCountStart, LoopWithCountEnd,
-                          LoopWhileStart, LoopWhileEnd, LoopForStart, LoopForEnd, LoopUntilStart,
-                          LoopUntilEnd, Exit, Assert, Stop, Expr, GetItem, SetItem, Slice, Use)
+from .ast_classes import (
+    AlgStart,
+    AlgEnd,
+    Call,
+    Input,
+    IfStart,
+    IfEnd,
+    Statement,
+    StoreVar,
+    Op,
+    Output,
+    ElseStart,
+    LoopWithCountStart,
+    LoopWithCountEnd,
+    LoopWhileStart,
+    LoopWhileEnd,
+    LoopForStart,
+    LoopForEnd,
+    LoopUntilStart,
+    LoopUntilEnd,
+    Exit,
+    Assert,
+    Stop,
+    Expr,
+    GetItem,
+    SetItem,
+    Slice,
+    Use,
+)
 from .value import Value
 from .tokenizer import Tokenizer
 from .exceptions import SyntaxException
@@ -11,6 +36,7 @@ from .exceptions import SyntaxException
 
 class Env(Enum):
     """Окружение, в котором мы сейчас находимся."""
+
     INTRODUCTION = auto()
     MAIN = auto()
     ALG = auto()
@@ -43,7 +69,7 @@ class Parser:
 
         self._was_alg = False
 
-        tokenizer = Tokenizer(code+'\n')
+        tokenizer = Tokenizer(code + '\n')
         self.tokens = tokenizer.tokenize()
 
     def _next_token(self) -> None:
@@ -59,8 +85,7 @@ class Parser:
             self._parse()
         except StopIteration:
             if self.envs and self.envs[-1] in (Env.MAIN, Env.ALG):
-                raise SyntaxException(self.line, '\n',
-                                      'нет "кон" после "нач"') from None
+                raise SyntaxException(self.line, '\n', 'нет "кон" после "нач"') from None
             if self.debug:
                 print('-' * 40)
 
@@ -114,8 +139,11 @@ class Parser:
             start_line = self.line - 1
         elif self.cur_token.value == 'нач':
             if ret_type:
-                raise SyntaxException(self.line, self.cur_token.value,
-                                      'алгоритм без имени ничего не возвращает')
+                raise SyntaxException(
+                    self.line,
+                    self.cur_token.value,
+                    'алгоритм без имени ничего не возвращает',
+                )
             self.res.append(AlgStart(self.line, is_main=is_main, name=''))
             return
         else:
@@ -138,19 +166,29 @@ class Parser:
             if self.cur_token.value != 'нач':
                 raise SyntaxException(self.line, self.cur_token.value)
         if not alg_name and self._was_alg:
-            raise SyntaxException(self.line, self.cur_token.value,
-                                  'не указано имя алгоритма')
+            raise SyntaxException(self.line, self.cur_token.value, 'не указано имя алгоритма')
         if ret_type and not alg_name:
-            raise SyntaxException(self.line, self.cur_token.value,
-                                  'алгоритм без имени ничего не возвращает')
+            raise SyntaxException(
+                self.line,
+                self.cur_token.value,
+                'алгоритм без имени ничего не возвращает',
+            )
 
         while self.cur_token.kind == 'NEWLINE':
             self._next_token()
         if self.cur_token.value == 'нач':
             self._next_token()
 
-        self.res.append(AlgStart(start_line, is_main=is_main, name=alg_name,
-                                 ret_type=ret_type, ret_name=ret_name, args=args))
+        self.res.append(
+            AlgStart(
+                start_line,
+                is_main=is_main,
+                name=alg_name,
+                ret_type=ret_type,
+                ret_name=ret_name,
+                args=args,
+            )
+        )
 
     def _handle_alg_args(self) -> tuple[list, str, str]:
         args = []
@@ -308,8 +346,14 @@ class Parser:
         if tables:
             if self.cur_token.kind != 'NEWLINE':
                 raise SyntaxException(self.line, self.cur_token.value)
-            self.res.append(StoreVar(self.line, typename, [table[0] for table in tables],
-                                     [table[1] for table in tables]))
+            self.res.append(
+                StoreVar(
+                    self.line,
+                    typename,
+                    [table[0] for table in tables],
+                    [table[1] for table in tables],
+                )
+            )
             return
 
         if 'таб' in typename and not tables:
@@ -347,8 +391,7 @@ class Parser:
         if self.cur_token.kind != 'NEWLINE':
             raise SyntaxException(self.line, self.cur_token.value)
         if len(indexes) > 3:
-            raise SyntaxException(self.line, self.cur_token.value,
-                                  'таблицы не бывают размерности > 3')
+            raise SyntaxException(self.line, self.cur_token.value, 'таблицы не бывают размерности > 3')
         return indexes
 
     def _parse_indexes_pair(self) -> tuple[Expr, Expr]:
@@ -572,9 +615,15 @@ class Parser:
         close_table_brackets = 0
 
         last_name = ''
-        while (self.cur_token.kind in ('STRING', 'NAME', 'CHAR', 'NUMBER',
-                                       'OP', 'EQ', 'TABLE_BRACKET') or
-               self.cur_token.value in ('да', 'нет', 'нс')):
+        while self.cur_token.kind in (
+            'STRING',
+            'NAME',
+            'CHAR',
+            'NUMBER',
+            'OP',
+            'EQ',
+            'TABLE_BRACKET',
+        ) or self.cur_token.value in ('да', 'нет', 'нс'):
             if self.cur_token.value == '(' and not last_name:
                 open_brackets += 1
             elif self.cur_token.value == ')':
@@ -583,21 +632,25 @@ class Parser:
                 open_table_brackets += 1
             elif self.cur_token.value == ']':
                 close_table_brackets += 1
-            if (in_alg_call and close_brackets - open_brackets == 1) or\
-                    (in_getitem and close_table_brackets - open_table_brackets == 1):
+            if (in_alg_call and close_brackets - open_brackets == 1) or (
+                in_getitem and close_table_brackets - open_table_brackets == 1
+            ):
                 self._next_token()
                 break
 
-            if (self.cur_token.kind in ('STRING', 'NAME', 'CHAR', 'NUMBER')
-                    or self.cur_token.value in ('да', 'нет', 'нс')):
+            if self.cur_token.kind in (
+                'STRING',
+                'NAME',
+                'CHAR',
+                'NUMBER',
+            ) or self.cur_token.value in ('да', 'нет', 'нс'):
                 cur_kind = 'val'
             elif self.cur_token.value not in ('(', ')'):
                 cur_kind = 'op'
             else:
                 cur_kind = ''
 
-            if (last_kind == cur_kind and
-                    not (last_kind == 'op' and self.cur_token.value in ('+', '-', 'не'))):
+            if last_kind == cur_kind and not (last_kind == 'op' and self.cur_token.value in ('+', '-', 'не')):
                 raise SyntaxException(self.line, self.cur_token.value)
 
             if last_name and self.cur_token.value == '(':
@@ -637,8 +690,12 @@ class Parser:
         if self.cur_token.value in ('+', '-', 'не'):
             unary_op = Op(self.cur_token.value, unary=True)
             self._next_token()
-        if (self.cur_token.kind in ('STRING', 'NAME', 'CHAR', 'NUMBER') or
-                self.cur_token.value in ('да', 'нет')):
+        if self.cur_token.kind in (
+            'STRING',
+            'NAME',
+            'CHAR',
+            'NUMBER',
+        ) or self.cur_token.value in ('да', 'нет'):
             if unary_op is None:
                 return [_get_val(self.cur_token.kind, self.cur_token.value)]
             else:
@@ -736,8 +793,7 @@ def _to_reverse_polish(expr: Expr) -> Expr:
     for token in expr:
         if isinstance(token, (Call, GetItem, Slice, Value)):
             rpn.append(token)
-        elif (token in (Op('-'), Op('+'), Op('не')) and
-              (prev is None or isinstance(prev, Op)) and prev != Op(')')):
+        elif token in (Op('-'), Op('+'), Op('не')) and (prev is None or isinstance(prev, Op)) and prev != Op(')'):
             stack.append(Op(token.op, unary=True))
         elif isinstance(token, Op):
             if token.op == '(':
@@ -749,12 +805,14 @@ def _to_reverse_polish(expr: Expr) -> Expr:
                 assert len(stack) > 0
                 stack.pop()
             else:
-                while (stack and
-                       (isinstance(stack[-1], Op) and stack[-1].op not in ('(', ')')) and
-                           (_get_priority_and_associative(stack[-1])[0] >=
-                                _get_priority_and_associative(token)[0] and
-                            _get_priority_and_associative(token)[1] == 'left')
-                       ):
+                while (
+                    stack
+                    and (isinstance(stack[-1], Op) and stack[-1].op not in ('(', ')'))
+                    and (
+                        _get_priority_and_associative(stack[-1])[0] >= _get_priority_and_associative(token)[0]
+                        and _get_priority_and_associative(token)[1] == 'left'
+                    )
+                ):
                     rpn.append(stack.pop())
 
                 stack.append(token)

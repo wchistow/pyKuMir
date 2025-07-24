@@ -4,16 +4,15 @@ from PyQt6.QtCore import QEvent, Qt, pyqtSignal
 from PyQt6.QtGui import QTextCursor
 from PyQt6.QtWidgets import QTextEdit
 
-CSS = '''<style>
+CSS = """<style>
 .sys {
     font-style: italic;
     color: grey;
 }
-</style>'''
+</style>"""
 
 
 class Console(QTextEdit):
-
     output = pyqtSignal(str)
     output_sys = pyqtSignal(str)
 
@@ -46,7 +45,7 @@ class Console(QTextEdit):
 
     def _output_sys(self, text: str) -> None:
         self._cursor_to_end()
-        html_text = text.replace("\n", "<br />")
+        html_text = text.replace('\n', '<br />')
         self.insertHtml(f'<span class="sys">{html_text}</span>')
 
     def _output(self, text: str) -> None:
