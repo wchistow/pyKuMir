@@ -1,5 +1,4 @@
 from enum import auto, Enum
-from typing import Iterable
 
 from .ast_classes import (AlgStart, AlgEnd, Call, Input, IfStart, IfEnd, Statement,
                           StoreVar, Op, Output, ElseStart, LoopWithCountStart, LoopWithCountEnd,
@@ -59,7 +58,7 @@ class Parser:
         try:
             self._parse()
         except StopIteration:
-            if self.envs and self.envs[-1] == Env.MAIN:
+            if self.envs and self.envs[-1] in (Env.MAIN, Env.ALG):
                 raise SyntaxException(self.line, '\n',
                                       'нет "кон" после "нач"') from None
             if self.debug:
@@ -126,6 +125,7 @@ class Parser:
         args = []
         if self.cur_token.value == '(':
             args, _ret_name, _ret_type = self._handle_alg_args()
+            self._next_token()
             ret_type = _ret_type or ret_type
             ret_name = _ret_name or ret_name
         elif self.cur_token.kind == 'NEWLINE':
@@ -144,7 +144,10 @@ class Parser:
             raise SyntaxException(self.line, self.cur_token.value,
                                   'алгоритм без имени ничего не возвращает')
 
-        self._next_token()
+        while self.cur_token.kind == 'NEWLINE':
+            self._next_token()
+        if self.cur_token.value == 'нач':
+            self._next_token()
 
         self.res.append(AlgStart(start_line, is_main=is_main, name=alg_name,
                                  ret_type=ret_type, ret_name=ret_name, args=args))
@@ -448,7 +451,6 @@ class Parser:
 
         self.envs.append(Env.IF)
         self.res.append(IfStart(self.line, expr))
-        self._next_token()
 
     def _handle_loop(self):
         self._next_token()
@@ -539,11 +541,6 @@ class Parser:
         self.res.append(IfStart(self.line, cond))
 
     def _handle_switch_else(self):
-        self._next_token()
-
-        if self.cur_token.value != ':':
-            raise SyntaxException(self.line, self.cur_token.value)
-
         self.res.append(ElseStart(self.line))
 
     def _handle_switch_end(self):
@@ -578,7 +575,7 @@ class Parser:
         while (self.cur_token.kind in ('STRING', 'NAME', 'CHAR', 'NUMBER',
                                        'OP', 'EQ', 'TABLE_BRACKET') or
                self.cur_token.value in ('да', 'нет', 'нс')):
-            if self.cur_token.value == '(':
+            if self.cur_token.value == '(' and not last_name:
                 open_brackets += 1
             elif self.cur_token.value == ')':
                 close_brackets += 1
@@ -636,8 +633,16 @@ class Parser:
 
     def _parse_const_expr(self) -> list[Value]:
         self._next_token()
-        if self.cur_token.kind in ('STRING', 'NAME', 'CHAR', 'NUMBER'):
-            return [_get_val(self.cur_token.kind, self.cur_token.value)]
+        unary_op = None
+        if self.cur_token.value in ('+', '-', 'не'):
+            unary_op = Op(self.cur_token.value, unary=True)
+            self._next_token()
+        if (self.cur_token.kind in ('STRING', 'NAME', 'CHAR', 'NUMBER') or
+                self.cur_token.value in ('да', 'нет')):
+            if unary_op is None:
+                return [_get_val(self.cur_token.kind, self.cur_token.value)]
+            else:
+                return [_get_val(self.cur_token.kind, self.cur_token.value), unary_op]
         raise SyntaxException(self.line, self.cur_token.value)
 
     def _parse_call(self, name: str) -> Call:
@@ -650,7 +655,13 @@ class Parser:
             self._next_token()
             args.append(self._parse_expr(in_alg_call=True))
 
-        return Call(self.line - 1, name, args)
+        while self.cur_token.value == ')':
+            self._next_token()
+
+        if self.cur_token.value == '\n':
+            return Call(self.line - 1, name, args)
+        else:
+            return Call(self.line, name, args)
 
     def _parse_getitem(self, name: str) -> GetItem | Slice:
         self._next_token()
@@ -665,10 +676,6 @@ class Parser:
                 self._next_token()
                 indexes.append(self._parse_expr(in_getitem=True))
             res = GetItem(self.line, name, indexes)
-        elif self.cur_token.kind != 'NEWLINE':
-            raise SyntaxException(self.line, self.cur_token.value)
-        if self.cur_token.kind != 'NEWLINE':
-            raise SyntaxException(self.line, self.cur_token.value)
         return res
 
     def _parse_table_item_indexes(self) -> list[Expr]:
@@ -692,78 +699,70 @@ def _get_val(kind: str, value: str) -> Value | Op:
         return Value('цел', int(value))
     elif kind == 'STRING':
         return Value('лит', value[1:-1])
-    elif kind == 'NAME':
-        return Value('get-name', value)
     elif kind == 'OP' or kind == 'EQ':
         return Op(value)
     elif kind == 'CHAR':
         return Value('сим', value[1:-1])
     elif kind == 'KEYWORD' and value in ('да', 'нет'):
         return Value('лог', value)
-    elif kind == 'KEYWORD' and value == 'нс':
+    else:
         return Value('get-name', value)
 
 
-def _get_priority(op: Op, unary: bool) -> int:
-    """Возвращает приоритет оператора."""
-    if unary and op.op in ('-', '+'):
-        return 4
-    elif unary and op.op == 'не':
-        return 1
-    if op.op in ('*', '/', '**'):
-        return 3
+def _get_priority_and_associative(op: Op) -> tuple[int, str]:
+    if op.op in ('-', '+') and op.unary:
+        return 6, 'left'
+    elif op.op == 'не':
+        return 1, 'left'
+    elif op.op in ('+', '-'):
+        return 2, 'left'
+    elif op.op in ('*', '/'):
+        return 3, 'left'
+    elif op.op == '**':
+        return 4, 'left'
     elif op.op in ('>', '<', '=', '>=', '<=', '<>'):
-        return 2
+        return 5, 'left'
     elif op.op in ('или', 'и'):
-        return 3
-    return 0
+        return 0, 'left'
+    else:
+        raise NotImplementedError()
 
 
-def _to_reverse_polish(expr: Iterable[Value | Op]) -> list[Value | Op]:
-    """Выражение -> обратная польская запись."""
-    notation: list[Value | Op] = []
-    operator_stack: list[Op] = []
-    in_parentheses = False
-    indent = 0
-    code_in_brackets = []
+def _to_reverse_polish(expr: Expr) -> Expr:
+    rpn = []
+    stack = []
     prev = None
+
     for token in expr:
-        if in_parentheses:
-            if token == Op(op='('):
-                indent += 1
-                code_in_brackets.append(token)
-            elif token != Op(op=')'):
-                code_in_brackets.append(token)
-            elif token == Op(op=')'):
-                if indent == 0:
-                    in_parentheses = False
-                    notation.extend(_to_reverse_polish(code_in_brackets))
-                    code_in_brackets.clear()
-                else:
-                    indent -= 1
-                    code_in_brackets.append(token)
-        else:
-            if isinstance(token, Op):
-                if token.op == '(':
-                    in_parentheses = True
-                else:
-                    while operator_stack:
-                        unary = ((prev is None or (isinstance(prev, Op) and prev.op != ')'))
-                            and token.op in ('+', '-', 'не'))
-                        op_from_stack = operator_stack[-1]
-                        if (_get_priority(op_from_stack, op_from_stack.unary)
-                                >= _get_priority(token, unary=unary)):
-                            notation.append(Op(op_from_stack.op, unary=op_from_stack.unary))
-                            operator_stack.pop()
-                        else:
-                            break
-                    if ((prev is None or (isinstance(prev, Op) and prev.op != ')'))
-                            and token.op in ('+', '-', 'не')):
-                        token.unary = True
-                    operator_stack.append(token)
+        if isinstance(token, (Call, GetItem, Slice, Value)):
+            rpn.append(token)
+        elif (token in (Op('-'), Op('+'), Op('не')) and
+              (prev is None or isinstance(prev, Op)) and prev != Op(')')):
+            stack.append(Op(token.op, unary=True))
+        elif isinstance(token, Op):
+            if token.op == '(':
+                stack.append(token)
+            elif token.op == ')':
+                while stack and stack[-1] != Op('('):
+                    rpn.append(stack.pop())
+
+                assert len(stack) > 0
+                stack.pop()
             else:
-                notation.append(token)
+                while (stack and
+                       (isinstance(stack[-1], Op) and stack[-1].op not in ('(', ')')) and
+                           (_get_priority_and_associative(stack[-1])[0] >=
+                                _get_priority_and_associative(token)[0] and
+                            _get_priority_and_associative(token)[1] == 'left')
+                       ):
+                    rpn.append(stack.pop())
+
+                stack.append(token)
+
         prev = token
-    for op in operator_stack[::-1]:
-        notation.append(Op(op.op, op.unary))
-    return notation
+
+    while len(stack) > 0:
+        # assert stack[-1] != Op('(')
+        rpn.append(stack.pop())
+
+    return rpn

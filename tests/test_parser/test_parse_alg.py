@@ -162,6 +162,35 @@ def test_parse_call_alg_with_space_in_name():
         ast_classes.AlgEnd(7),
     ]
 
+def test_parse_nested_call():
+    code = 'вывод тест1(не тест2(а, 0) = "привет")'
+    parser = Parser(code)
+    parsed = parser.parse()
+    assert parsed == [
+        ast_classes.Output(
+            lineno=0,
+            exprs=[[
+                ast_classes.Call(
+                    lineno=0,
+                    alg_name='тест1',
+                    args=[[
+                        ast_classes.Call(
+                            lineno=0,
+                            alg_name='тест2',
+                            args=[
+                                [Value(typename='get-name', value='а')],
+                                [Value(typename='цел', value=0)]
+                            ]
+                        ),
+                        Value(typename='лит', value='привет'),
+                        ast_classes.Op(op='='),
+                        ast_classes.Op(op='не', unary=True)
+                    ]]
+                )
+            ]]
+        )
+    ]
+
 def test_without_start_keyword_error():
     code = '''алг
     цел а := 5

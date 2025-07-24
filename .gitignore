@@ -3,6 +3,7 @@ __pycache__/
 .mypy_cache/
 .venv/
 .idea/
+.ropeproject
 
 uv.lock
 test.py

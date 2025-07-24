@@ -37,7 +37,7 @@ def run_program(code: str, debug: bool):
     parser = Parser(code, debug)
     parsed = parser.parse()
     if debug:
-        print(parsed)
+        print(*parsed, sep='\n')
         print('-'*40)
     bc = build_bytecode(parsed)
     if debug:

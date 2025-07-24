@@ -1,7 +1,7 @@
 import re
 from collections.abc import Callable
 from pathlib import Path
-from typing import TypeAlias, Any
+from typing import TypeAlias, Any, TextIO
 
 from .actors import actors
 from .actors.base import KumirFunc, KumirValue
@@ -18,14 +18,14 @@ class VM:
                  output_f: Callable[[str], None],
                  input_f: Callable[[], str],
                  algs: dict[
-                           str,
-                           tuple[
-                               list[tuple[str, str, str]],
-                               str,
-                               str,
-                               list[list[BytecodeType], list[int]]
-                           ]
-                       ] | None = None,
+                     str,
+                     tuple[
+                         list[tuple[str, str, str]],
+                         str,
+                         str,
+                         list[list[BytecodeType], list[int]]
+                     ]
+                 ] | None = None,
                  work_dir: str = Path.home() / 'Kumir',
                  cur_dir: str | None = None,
                  cur_file: str | None = None) -> None:
@@ -56,7 +56,8 @@ class VM:
         self.glob_vars: Namespace = {'нс': ('лит', Value('лит', '\n'))}
         self.stack: list[Value | None] = []
 
-        self.call_stack: list[Namespace] = []  # Локальные переменные текущих функций
+        # Локальные переменные текущих функций
+        self.call_stack: list[Namespace] = []
         self.in_alg = False
 
         self.cur_tags: list[int] = []
@@ -119,11 +120,13 @@ class VM:
         if self.cur_algs:
             for arg in self.algs[self.cur_algs[-1]][0]:
                 if arg[0] == 'арг' and arg[2] in names:
-                    raise RuntimeException(lineno, 'нельзя присвоить аргументу')
+                    raise RuntimeException(
+                        lineno, 'нельзя присвоить аргументу')
         value = self.stack.pop()
         if typename is None:  # сохранение значения в уже объявленную переменную
             if not self._var_defined(names[0]):
-                raise RuntimeException(lineno, f'имя "{names[0]}" не определено')
+                raise RuntimeException(
+                    lineno, f'имя "{names[0]}" не определено')
             var = self._get_all_namespaces()[names[0]]
             self._save_var(lineno, var[0], names[0], value)
             return
@@ -154,7 +157,8 @@ class VM:
             last_i = self.stack.pop().value
             first_i = self.stack.pop().value
             indexes.append((first_i, last_i))
-        self.stack.append(Value(typename, self._build_table(indexes, len(indexes))))
+        self.stack.append(
+            Value(typename, self._build_table(indexes, len(indexes))))
 
     def _build_table(self, indexes: list[tuple[int, int]], depth: int):
         start_i, last_i = indexes[0]
@@ -174,13 +178,17 @@ class VM:
         # операции над разными типами можно проводить, только если это цел или вещ
         if sorted((a.typename, b.typename)) == ['вещ', 'цел']:
             typename = 'вещ'
+        elif sorted((a.typename, b.typename)) == ['лит', 'сим']:
+            typename = 'лит'
         elif a.typename != b.typename:
-            raise RuntimeException(lineno, f'нельзя "{b.typename} {op} {a.typename}"')
+            raise RuntimeException(
+                lineno, f'нельзя "{b.typename} {op} {a.typename}"')
 
         if op == '+' and a.typename in ('цел', 'вещ', 'лит'):
             self.stack.append(Value(typename, b.value + a.value))
-        elif op == '+' and a.typename == 'сим':
-            self.stack.append(Value('лит', b.value + a.value))  # <сим> + <сим> = <лит>
+        elif op == '+' and a.typename in ('сим', 'лит'):
+            self.stack.append(Value('лит', b.value + a.value)
+                              )  # <сим> + <сим> = <лит>
         elif op == '-' and a.typename in ('цел', 'вещ'):
             self.stack.append(Value(typename, b.value - a.value))
         elif op == '*' and a.typename in ('цел', 'вещ'):
@@ -212,14 +220,16 @@ class VM:
                 _bool_to_str(_str_to_bool(b.value) and _str_to_bool(a.value)))
             )
         else:
-            raise RuntimeException(lineno, f'нельзя "{b.typename} {op} {a.typename}"')
+            raise RuntimeException(
+                lineno, f'нельзя "{b.typename} {op} {a.typename}"')
 
     def unary_op(self, lineno: int, op: str) -> None:
         a = self.stack.pop()
         if op == 'не':
             if a.typename != 'лог':
                 raise RuntimeException(lineno, f'нельзя "не {a.typename}"')
-            self.stack.append(Value('лог', _bool_to_str(not _str_to_bool(a.value))))
+            self.stack.append(
+                Value('лог', _bool_to_str(not _str_to_bool(a.value))))
         elif op in ('+', '-'):
             if a.typename not in ('цел', 'вещ'):
                 raise RuntimeException(lineno, f'нельзя "{op}{a.typename}"')
@@ -234,7 +244,7 @@ class VM:
         Обрабатывает инструкцию OUTPUT
         :param exprs_num: количество выражений, которых нужно вывести (они загружаются из стека)
         """
-        to_file = None
+        to_file: TextIO | None = None
         exprs = [self.stack.pop() for _ in range(exprs_num)][::-1]
         if exprs[0].typename == 'файл':
             to_file = exprs[0].value
@@ -277,7 +287,8 @@ class VM:
 
             if target_var_type == 'лит':
                 self._save_inputted(lineno, target_var_type, target_var_name,
-                                    _convert_string_to_type(lineno, inputted, target_var_type),
+                                    _convert_string_to_type(
+                                        lineno, inputted, target_var_type),
                                     indexes)
                 cur_target_i += 1
             elif 'таб' in target_var_type:
@@ -294,7 +305,8 @@ class VM:
                     (target_var, target_var_type,
                      target_var_name, new_indexes) = self._get_target(lineno, target)
                     self._save_inputted(lineno, target_var_type, target_var_name,
-                                        _convert_string_to_type(lineno, text, target_var_type),
+                                        _convert_string_to_type(
+                                            lineno, text, target_var_type),
                                         indexes)
                     cur_target_i += 1
 
@@ -353,7 +365,8 @@ class VM:
             try:
                 ret_v = alg[2](py_args, **self._get_extra_args(name))
             except RuntimeException as e:
-                raise RuntimeException(lineno, ' '.join(e.args[0].split()[:-2])) from None
+                raise RuntimeException(lineno, ' '.join(
+                    e.args[0].split()[:-2])) from None
             if alg[1]:  # ret_type
                 self.stack.append(ret_v)
         else:
@@ -367,7 +380,8 @@ class VM:
             if ret_v is not None:
                 self.stack.append(ret_v)
             else:
-                raise RuntimeException(lineno, 'функция должна возвращать значение')
+                raise RuntimeException(
+                    lineno, 'функция должна возвращать значение')
 
         self.cur_algs.pop()
         self.cur_algs_inst_n.pop()
@@ -412,15 +426,18 @@ class VM:
         if 'таб' in var.typename:
             _check_table_index(lineno, index.value, var.value)
             res = var.value[index.value]
+            if isinstance(res, dict):
+                res = Value(var.typename, res)
         elif var.typename == 'лит':
             _check_str_index(lineno, index, var.value)
-            res = var.value[index.value - 1]
+            res = Value('сим', var.value[index.value - 1])
         else:
             raise RuntimeException(lineno, 'лишние индексы')
 
         if res is None:
-            raise RuntimeException(lineno, 'значение элемента таблицы не определено')
-        self.stack.append(res if isinstance(res, Value) else Value(var.typename, res))
+            raise RuntimeException(
+                lineno, 'значение элемента таблицы не определено')
+        self.stack.append(res)
 
     def set_item(self, lineno: int, name: str, len_indexes: int) -> None:
         indexes: list[int] = []
@@ -445,7 +462,8 @@ class VM:
                         value: Value, var: Value) -> None:
         table_type = var.typename.removesuffix('таб')
         if table_type != value.typename:
-            raise RuntimeException(lineno, f'нельзя "{table_type} := {value.typename}"')
+            raise RuntimeException(
+                lineno, f'нельзя "{table_type} := {value.typename}"')
 
         table_part = var.value
         for index in indexes[:-1]:
@@ -455,14 +473,16 @@ class VM:
         _check_table_index(lineno, indexes[-1], table_part)
         table_part[indexes[-1]] = value
 
-        self._save_var(lineno, var.typename, var_name, Value(var.typename, var.value))
+        self._save_var(lineno, var.typename, var_name,
+                       Value(var.typename, var.value))
 
     def _set_item_str(self, lineno: int, var_name: str, index: int,
                       value: Value, var: Value) -> None:
         if value.typename == 'сим' or (value.typename == 'лит' and len(value.value) == 1):
             new_val = var.value
             new_val = new_val[:index - 1] + value.value + new_val[index:]
-            self._save_var(lineno, var.typename, var_name, Value('лит', new_val))
+            self._save_var(lineno, var.typename, var_name,
+                           Value('лит', new_val))
         else:
             raise RuntimeException(lineno, f'нельзя "сим := {value.typename}"')
 
@@ -521,7 +541,8 @@ class VM:
         if value_type == typename:  # типы целевой переменной и значения совпадают
             namespace[name] = (typename, value)
         else:
-            raise RuntimeException(lineno, message=f'нельзя "{typename} := {value_type}"')
+            raise RuntimeException(lineno, message=f'нельзя "{
+                                   typename} := {value_type}"')
 
     def get_var(self, lineno: int, name: str) -> Value:
         """
@@ -598,12 +619,14 @@ def _convert_string_to_type(lineno: int, string: str, var_type: str) -> Value:
         try:
             return Value('цел', int(string))
         except ValueError:
-            raise RuntimeException(lineno, 'ошибка ввода целого числа') from None
+            raise RuntimeException(
+                lineno, 'ошибка ввода целого числа') from None
     elif var_type == 'вещ':
         try:
             return Value('вещ', float(string))
         except ValueError:
-            raise RuntimeException(lineno, 'ошибка ввода вещественного числа') from None
+            raise RuntimeException(
+                lineno, 'ошибка ввода вещественного числа') from None
     elif var_type == 'лог':
         return Value('лог', string)
     elif var_type == 'лит':

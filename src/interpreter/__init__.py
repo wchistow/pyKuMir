@@ -29,7 +29,7 @@ def pretty_print_bc(bc: list[BytecodeType], algs: dict) -> None:
     for name, alg in algs.items():
         args = ', '.join(' '.join(arg) for arg in alg[0])
         print(f'{name!r} ({args}):')
-        tags = alg[1]
+        tags = alg[3][1]
         for i, inst in enumerate(alg[3][0]):
             cur_tags = [str(index) for index, tag in enumerate(tags) if tag == i]
             print(f'    {",".join(cur_tags) + (":" if cur_tags else ""):4}'

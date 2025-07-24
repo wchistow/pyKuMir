@@ -3,7 +3,7 @@ from typing import Optional, Union, TypeAlias
 
 from .value import Value
 
-Expr: TypeAlias = list[Union[Value, 'Op']]
+Expr: TypeAlias = list[Union[Value, 'Op', 'Call', 'GetItem', 'Slice']]
 
 @dataclass
 class Statement:
