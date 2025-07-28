@@ -104,6 +104,7 @@ class BytecodeBuilder:
 
         self.bytecode.append((0, Bytecode.USE, ('__builtins__',)))
         self.bytecode.append((0, Bytecode.USE, ('Файлы',)))
+        self.cur_inst_n += 2
         for i, stmt in enumerate(parsed_code):
             if self.cur_alg is not None:
                 self.cur_ns = self.algs[self.cur_alg][2][0]
@@ -185,13 +186,13 @@ class BytecodeBuilder:
             else:
                 raise RuntimeException(stmt.lineno, f'имя "{stmt.alg_name}" не определено')
         for arg, arg_sign in zip(stmt.args, alg[0]):
-            if arg_sign[0] == 'рез':
+            if 'рез' in arg_sign[0]:
                 if not (len(arg) == 1 and isinstance(arg[0], Value) and arg[0].typename == 'get-name'):
                     raise RuntimeException(stmt.lineno, 'не величина')
                 self.cur_ns.append((stmt.lineno, Bytecode.SET_RES_VAR, (arg[0].value,)))
                 res_var_setted = True
                 self.cur_inst_n += 1
-            else:
+            if arg_sign[0] != 'рез':
                 self.cur_ns.extend(self._expr_bc(stmt.lineno, arg))
 
         if not res_var_setted:

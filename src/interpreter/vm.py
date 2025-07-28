@@ -80,7 +80,7 @@ class VM:
             Bytecode.OUTPUT: lambda inst: self.output(inst[0], inst[2][0]),
             Bytecode.INPUT: lambda inst: self.input(inst[0], inst[2]),
             Bytecode.SET_RES_VAR: lambda inst: self.res_vars.append(inst[2][0]),
-            Bytecode.CALL: lambda inst: self.call(inst[0], inst[2][0], inst[2][1]),
+            Bytecode.CALL: lambda inst: self.call(inst[0], inst[2][0]),
             Bytecode.RET: lambda inst: self.ret(inst[0]),
             Bytecode.JUMP_TAG: lambda inst: self.jump_tag(inst[2][0]),
             Bytecode.JUMP_TAG_IF_FALSE: lambda inst: self.jump_tag_if_false(inst[0], inst[2][0]),
@@ -147,7 +147,7 @@ class VM:
         except RuntimeException as e1:
             if re.fullmatch(r'имя "[\w ]+" не определено \(строка \d+\)', e1.args[0]) is not None:
                 try:
-                    self.call(lineno, name, 0)
+                    self.call(lineno, name)
                 except RuntimeException as e2:
                     raise e2 from None
             else:
@@ -346,7 +346,7 @@ class VM:
         else:
             self._save_var(lineno, var_type, var_name, value)
 
-    def call(self, lineno: int, name: str, args_n: int) -> None:
+    def call(self, lineno: int, name: str) -> None:
         """
         Обрабатывает инструкцию CALL
         :param lineno: номер текущей строки кода
@@ -355,7 +355,7 @@ class VM:
         """
         if name in self.algs:
             alg = self.algs[name]
-            self.call_stack.append(self._load_args(lineno, alg[0], args_n))
+            self.call_stack.append(self._load_args(lineno, alg[0]))
             if alg[1]:  # ret_type
                 self.call_stack[-1]['знач'] = (alg[1], None)
 
@@ -370,7 +370,7 @@ class VM:
             self._execute(alg[2][0])
         elif name in self.actors_algs:
             alg = self.actors_algs[name]
-            args = self._load_args(lineno, alg[0], args_n)
+            args = self._load_args(lineno, alg[0])
             py_args = [arg[1] for arg in args.values()]
             try:
                 ret_v = alg[2](py_args, **self._get_extra_args(name))
@@ -396,11 +396,13 @@ class VM:
             else:
                 raise RuntimeException(lineno, 'функция должна возвращать значение')
         for arg in self.algs[self.cur_algs[-1]][0]:
-            if arg[0] == 'рез':
+            if 'рез' in arg[0]:
                 if arg[2] in self.call_stack[-1]:
                     self.call_stack[-2][self.res_vars.pop()] = self.call_stack[-1][arg[2]]
 
         self.cur_algs.pop()
+        if self.cur_algs:
+            self.cur_tags = self.algs[self.cur_algs[-1]][2][1]
         self.cur_algs_inst_n.pop()
         self.call_stack.pop()
 
@@ -527,7 +529,7 @@ class VM:
         for name, func in funcs.items():
             self.actors_algs[name] = (func.args, func.ret_type, func.py_func)
 
-    def _load_args(self, lineno: int, args: list[tuple[str, str, str]], n: int) -> Namespace:
+    def _load_args(self, lineno: int, args: list[tuple[str, str, str]]) -> Namespace:
         res: Namespace = {}
         args_values = []
         for arg in args:
