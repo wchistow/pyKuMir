@@ -125,7 +125,6 @@ class Parser:
     def _handle_alg_header(self, is_main: bool):
         self._next_token()
 
-        ret_name = 'знач'
         ret_type = ''
         if self.cur_token.kind == 'TYPE':
             ret_type = self.cur_token.value
@@ -152,10 +151,8 @@ class Parser:
 
         args = []
         if self.cur_token.value == '(':
-            args, _ret_name, _ret_type = self._handle_alg_args()
+            args = self._handle_alg_args()
             self._next_token()
-            ret_type = _ret_type or ret_type
-            ret_name = _ret_name or ret_name
         elif self.cur_token.kind == 'NEWLINE':
             args = []
         elif self.cur_token.value != 'нач':
@@ -185,24 +182,23 @@ class Parser:
                 is_main=is_main,
                 name=alg_name,
                 ret_type=ret_type,
-                ret_name=ret_name,
                 args=args,
             )
         )
 
-    def _handle_alg_args(self) -> tuple[list, str, str]:
-        args = []
+    def _handle_alg_args(self) -> list[list[str]]:
+        args: list[list[str]] = []
         last_kind = 'арг'
         last_type = ''
-        arg, ret_type, ret_name = self._handle_arg(last_kind, last_type)
+        arg = self._handle_arg(last_kind, last_type)
         if arg is not None:
             args.append(arg)
             last_kind = arg[0]
-            if not arg[1]:
+            if arg[0] != 'рез' and not arg[1]:
                 raise SyntaxException(self.line, self.cur_token.value, 'не указан тип')
             last_type = arg[1]
         while self.cur_token.kind == 'COMMA':
-            arg, ret_type, ret_name = self._handle_arg(last_kind, last_type)
+            arg = self._handle_arg(last_kind, last_type)
             if arg is not None:
                 args.append(arg)
                 last_kind = arg[0]
@@ -211,22 +207,12 @@ class Parser:
                 last_type = arg[1]
         if self.cur_token.value != ')':
             raise SyntaxException(self.line, self.cur_token.value)
-        return args, ret_name, ret_type
+        return args
 
-    def _handle_arg(self, last_kind: str, last_type: str) -> tuple[list[str] | None, str, str]:
-        ret_type = ''
-        ret_name = ''
+    def _handle_arg(self, last_kind: str, last_type: str) -> list[str]:
         self._next_token()
         arg = self._parse_arg()
-        arg = [arg[0] or last_kind, arg[1] or last_type, arg[2]]
-        if 'рез' in arg[0]:
-            ret_name = arg[2]
-            ret_type = arg[1]
-            if arg[0] == 'аргрез':
-                return arg, ret_type, ret_name
-            return None, ret_type, ret_name
-        else:
-            return arg, ret_type, ret_name
+        return [arg[0] or last_kind, arg[1] or last_type, arg[2]]
 
     def _parse_arg(self) -> tuple[str, str, str]:
         if self.cur_token.value in ('арг', 'рез', 'аргрез'):

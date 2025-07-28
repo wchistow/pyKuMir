@@ -1,5 +1,6 @@
 from collections.abc import Callable
 
+from .actors import actors
 from .ast_classes import (
     StoreVar,
     Output,
@@ -30,6 +31,7 @@ from .ast_classes import (
     Use,
 )
 from .bytecode import Bytecode, BytecodeType
+from .exceptions import RuntimeException
 from .value import Value
 
 
@@ -50,7 +52,6 @@ class BytecodeBuilder:
             tuple[
                 list[tuple[str, str, str]],
                 str,
-                str,
                 list[list[BytecodeType], list[int]],
             ],
         ] = {}
@@ -62,7 +63,7 @@ class BytecodeBuilder:
         self.main_alg: str | None = None
         self.last_line = 0
 
-        self._actors = {'Файлы'}
+        self._actors = {'__builtins__', 'Файлы'}
 
         self.loops_with_count_indexes: list[int] = []
         self.loops_while_indexes: list[int] = []
@@ -99,13 +100,13 @@ class BytecodeBuilder:
         }
 
     def build(self, parsed_code: list[Statement]) -> tuple[list[BytecodeType], dict]:
-        self.tags = _get_all_statements_tags(parsed_code)
+        self.tags, self.algs = _get_all_statements_tags_and_algs(parsed_code)
 
         self.bytecode.append((0, Bytecode.USE, ('__builtins__',)))
         self.bytecode.append((0, Bytecode.USE, ('Файлы',)))
         for i, stmt in enumerate(parsed_code):
             if self.cur_alg is not None:
-                self.cur_ns = self.algs[self.cur_alg][3][0]
+                self.cur_ns = self.algs[self.cur_alg][2][0]
             else:
                 self.cur_ns = self.bytecode
 
@@ -159,7 +160,6 @@ class BytecodeBuilder:
         self.cur_inst_n += 1
 
     def _handle_alg_start(self, stmt: AlgStart) -> None:
-        self.algs[stmt.name] = (stmt.args, stmt.ret_type, stmt.ret_name, [[], []])
         self.cur_alg = stmt.name
         if stmt.is_main:
             self.main_alg = stmt.name
@@ -168,15 +168,37 @@ class BytecodeBuilder:
     def _handle_alg_end(self, stmt: AlgEnd) -> None:
         self.cur_ns.append((stmt.lineno, Bytecode.RET, ()))
         self.cur_inst_n += 1
-        self.algs[self.cur_alg][3][1] = self.cur_tags[:]
+        self.algs[self.cur_alg][2][1] = self.cur_tags[:]
         self.cur_tags.clear()
         self.cur_alg = None
 
     def _handle_call(self, stmt: Call) -> None:
-        for arg in stmt.args:
-            self.cur_ns.extend(self._expr_bc(stmt.lineno, arg))
+        res_var_setted = False
+        if stmt.alg_name in self.algs:
+            alg = self.algs[stmt.alg_name]
+        else:
+            for actor in self._actors:
+                if stmt.alg_name in actors[actor].funcs.keys():
+                    kf = actors[actor].funcs[stmt.alg_name]
+                    alg = (kf.args, kf.ret_type, [[], []])
+                    break
+            else:
+                raise RuntimeException(stmt.lineno, f'имя "{stmt.alg_name}" не определено')
+        for arg, arg_sign in zip(stmt.args, alg[0]):
+            if arg_sign[0] == 'рез':
+                if not (len(arg) == 1 and isinstance(arg[0], Value) and arg[0].typename == 'get-name'):
+                    raise RuntimeException(stmt.lineno, 'не величина')
+                self.cur_ns.append((stmt.lineno, Bytecode.SET_RES_VAR, (arg[0].value,)))
+                res_var_setted = True
+                self.cur_inst_n += 1
+            else:
+                self.cur_ns.extend(self._expr_bc(stmt.lineno, arg))
+
+        if not res_var_setted:
+            self.cur_ns.append((stmt.lineno, Bytecode.SET_RES_VAR, (alg[2],)))
+
         self.cur_ns.append((stmt.lineno, Bytecode.CALL, (stmt.alg_name, len(stmt.args))))
-        self.cur_inst_n += 1
+        self.cur_inst_n += 2
 
     def _handle_if_start(self, stmt: IfStart) -> None:
         self.ifs.append(id(stmt))
@@ -350,13 +372,14 @@ class BytecodeBuilder:
         return res
 
 
-def _get_all_statements_tags(parsed: list[Statement]) -> dict[int, list[int]]:
+def _get_all_statements_tags_and_algs(parsed: list[Statement]) -> tuple[dict[int, list[int]], dict]:
     """
     :return: словарь вида `{индекс_инструкции: [список тегов, которые она должна использовать]}`
     """
     res = {}
     ifs = []
     loops = []
+    algs = {}
 
     cur_tag_n = 0
 
@@ -379,7 +402,10 @@ def _get_all_statements_tags(parsed: list[Statement]) -> dict[int, list[int]]:
             res[loops.pop()].append(cur_tag_n)
             cur_tag_n += 1
 
+        elif isinstance(stmt, AlgStart):
+            algs[stmt.name] = (stmt.args, stmt.ret_type, [[], []])
+
         if isinstance(stmt, AlgEnd):
             cur_tag_n = 0
 
-    return res
+    return res, algs

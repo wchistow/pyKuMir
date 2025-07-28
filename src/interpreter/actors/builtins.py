@@ -3,7 +3,7 @@ import random
 import time
 from datetime import datetime
 
-from .base import Actor, KumirValue, KumirFunc
+from .base import Actor, KumirValue, KumirFunc, KumirNamespace
 
 
 class Builtins(Actor):
@@ -172,6 +172,26 @@ class Builtins(Actor):
         return KumirValue('лит', str(args[0].value))
 
     @staticmethod
+    def _str_to_float(args: list[KumirValue]) -> KumirNamespace:
+        try:
+            res = float(args[0].value)
+            done = 'да'
+        except ValueError:
+            res = 0.0
+            done = 'нет'
+        return {'знач': KumirValue('вещ', res), 'успех': KumirValue('лог', done)}
+
+    @staticmethod
+    def _str_to_int(args: list[KumirValue]) -> KumirNamespace:
+        try:
+            res = int(args[0].value)
+            done = 'да'
+        except ValueError:
+            res = 0.0
+            done = 'нет'
+        return {'знач': KumirValue('цел', res), 'успех': KumirValue('лог', done)}
+
+    @staticmethod
     def _wait(args: list[KumirValue]) -> None:
         x = args[0].value
         time.sleep(x / 1000)
@@ -179,8 +199,7 @@ class Builtins(Actor):
     @staticmethod
     def _cur_time(_: list[KumirValue]) -> KumirValue:
         now = datetime.now()
-        seconds_since_midnight = (now - now.replace(hour=0, minute=0,
-                                                    second=0, microsecond=0)).total_seconds()
+        seconds_since_midnight = (now - now.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
         return KumirValue('цел', int(seconds_since_midnight * 1000))
 
     funcs = {
@@ -220,6 +239,8 @@ class Builtins(Actor):
         'символ': KumirFunc(_unichr, 'сим', [('арг', 'цел', 'n')]),
         'юнисимвол': KumirFunc(_unichr, 'сим', [('арг', 'цел', 'n')]),
         'цел_в_лит': KumirFunc(_int_to_str, 'лит', [('арг', 'цел', 'число')]),
+        'лит_в_вещ': KumirFunc(_str_to_float, 'вещ', [('арг', 'лит', 'строка'), ('рез', 'лог', 'успех')]),
+        'лит_в_цел': KumirFunc(_str_to_int, 'цел', [('арг', 'лит', 'строка'), ('рез', 'лог', 'успех')]),
         'ждать': KumirFunc(_wait, '', [('арг', 'цел', 'x')]),
         'время': KumirFunc(_cur_time, 'цел', []),
     }

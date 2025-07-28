@@ -10,6 +10,7 @@ class Bytecode(Enum):
     BIN_OP = auto()
     UNARY_OP = auto()
     STORE = auto()
+    SET_RES_VAR = auto()
     CALL = auto()
     RET = auto()
     OUTPUT = auto()

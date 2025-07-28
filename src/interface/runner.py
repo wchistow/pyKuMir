@@ -34,12 +34,16 @@ class Runner:
         except SyntaxException as e:
             print(e.args)
         else:
+            if self.work_dir is not None:
+                kwargs = {'work_dir': self.work_dir}
+            else:
+                kwargs = {}
             vm = VM(
                 bytecode=bc[0],
                 output_f=self._output,
                 input_f=self._input,
                 algs=bc[1],
-                work_dir=self.work_dir,
+                **kwargs,
                 cur_dir=self.cur_dir,
                 cur_file=self.cur_file,
             )

@@ -23,7 +23,6 @@ class VM:
             tuple[
                 list[tuple[str, str, str]],
                 str,
-                str,
                 list[list[BytecodeType], list[int]],
             ],
         ]
@@ -67,6 +66,8 @@ class VM:
         self.cur_algs: list[str] = []
         self.cur_algs_inst_n: list[int] = [0]
 
+        self.res_vars: list[str] = []
+
         self.stopped = False
 
         self.CALL_TRANSITIONS = {
@@ -78,6 +79,7 @@ class VM:
             Bytecode.STORE: lambda inst: self.store_var(inst[0], inst[2][0], inst[2][1]),
             Bytecode.OUTPUT: lambda inst: self.output(inst[0], inst[2][0]),
             Bytecode.INPUT: lambda inst: self.input(inst[0], inst[2]),
+            Bytecode.SET_RES_VAR: lambda inst: self.res_vars.append(inst[2][0]),
             Bytecode.CALL: lambda inst: self.call(inst[0], inst[2][0], inst[2][1]),
             Bytecode.RET: lambda inst: self.ret(inst[0]),
             Bytecode.JUMP_TAG: lambda inst: self.jump_tag(inst[2][0]),
@@ -355,13 +357,17 @@ class VM:
             alg = self.algs[name]
             self.call_stack.append(self._load_args(lineno, alg[0], args_n))
             if alg[1]:  # ret_type
-                self.call_stack[-1][alg[2]] = (alg[1], None)
+                self.call_stack[-1]['знач'] = (alg[1], None)
+
+            for arg in alg[0]:
+                if arg[0] == 'рез':
+                    self.call_stack[-1][arg[2]] = (arg[1], None)
 
             self.in_alg = True
-            self.cur_tags = alg[3][1]
+            self.cur_tags = alg[2][1]
             self.cur_algs.append(name)
             self.cur_algs_inst_n.append(0)
-            self._execute(alg[3][0])
+            self._execute(alg[2][0])
         elif name in self.actors_algs:
             alg = self.actors_algs[name]
             args = self._load_args(lineno, alg[0], args_n)
@@ -370,20 +376,29 @@ class VM:
                 ret_v = alg[2](py_args, **self._get_extra_args(name))
             except RuntimeException as e:
                 raise RuntimeException(lineno, ' '.join(e.args[0].split()[:-2])) from None
-            if alg[1]:  # ret_type
-                self.stack.append(ret_v)
+            else:
+                if isinstance(ret_v, Value):
+                    self.stack.append(ret_v)
+                elif isinstance(ret_v, dict):
+                    self.stack.append(ret_v['знач'])
+                    for arg in self.actors_algs[name][0]:
+                        if arg[0] == 'рез':
+                            self.call_stack[-1][arg[2]] = (arg[1], ret_v[arg[2]])
         else:
             raise RuntimeException(lineno, f'имя "{name}" не определено')
 
     def ret(self, lineno: int):
         ret_type = self.algs[self.cur_algs[-1]][1]
-        ret_name = self.algs[self.cur_algs[-1]][2]
         if ret_type:
-            ret_v = self.call_stack[-1][ret_name][1]
+            ret_v = self.call_stack[-1]['знач'][1]
             if ret_v is not None:
                 self.stack.append(ret_v)
             else:
                 raise RuntimeException(lineno, 'функция должна возвращать значение')
+        for arg in self.algs[self.cur_algs[-1]][0]:
+            if arg[0] == 'рез':
+                if arg[2] in self.call_stack[-1]:
+                    self.call_stack[-2][self.res_vars.pop()] = self.call_stack[-1][arg[2]]
 
         self.cur_algs.pop()
         self.cur_algs_inst_n.pop()
@@ -514,8 +529,11 @@ class VM:
 
     def _load_args(self, lineno: int, args: list[tuple[str, str, str]], n: int) -> Namespace:
         res: Namespace = {}
-        args_values = [self.stack.pop() for _ in range(n)][::-1]
-        for arg, value in zip(args, args_values):
+        args_values = []
+        for arg in args:
+            if arg[0] != 'рез':
+                args_values.append(self.stack.pop())
+        for arg, value in zip(args, args_values[::-1]):
             if arg[1] != value.typename:
                 raise RuntimeException(lineno, 'неправильный тип аргумента')
             res[arg[2]] = (arg[1], value)
