@@ -351,7 +351,6 @@ class VM:
         Обрабатывает инструкцию CALL
         :param lineno: номер текущей строки кода
         :param name: имя алгоритма, который нужно вызвать
-        :param args_n: кол-во аргументов
         """
         if name in self.algs:
             alg = self.algs[name]
