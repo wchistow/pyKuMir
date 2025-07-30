@@ -67,6 +67,8 @@ class Parser:
         # Кол-во веток `при` в текущей конструкции `выбор`
         self.switch_cases_n = 0
 
+        self.cur_end_assert: Expr = []
+
         self._was_alg = False
 
         tokenizer = Tokenizer(code + '\n')
@@ -94,6 +96,9 @@ class Parser:
     def _parse(self) -> None:
         while True:
             if self.envs and self.envs[-1] in (Env.MAIN, Env.ALG) and self.cur_token.value == 'кон':
+                if self.cur_end_assert:
+                    self.res.append(Assert(self.line, self.cur_end_assert))
+                    self.cur_end_assert.clear()
                 self.res.append(AlgEnd(self.line))
                 self.envs.pop()
 
@@ -124,6 +129,9 @@ class Parser:
 
     def _handle_alg_header(self, is_main: bool):
         self._next_token()
+
+        start_assert: Expr = []  # дано
+        end_assert: Expr = []  # надо
 
         ret_type = ''
         if self.cur_token.kind == 'TYPE':
@@ -162,6 +170,17 @@ class Parser:
                 self._next_token()
             if self.cur_token.value != 'нач':
                 raise SyntaxException(self.line, self.cur_token.value)
+
+        if self.cur_token.value != 'нач':
+            self._next_token()
+            if self.cur_token.value == 'дано':
+                self._next_token()
+                start_assert = self._parse_expr()
+                self._next_token()
+            if self.cur_token.value == 'надо':
+                self._next_token()
+                end_assert = self._parse_expr()
+
         if not alg_name and self._was_alg:
             raise SyntaxException(self.line, self.cur_token.value, 'не указано имя алгоритма')
         if ret_type and not alg_name:
@@ -185,6 +204,10 @@ class Parser:
                 args=args,
             )
         )
+        if start_assert:
+            self.res.append(Assert(self.line, start_assert))
+        if end_assert:
+            self.cur_end_assert = end_assert
 
     def _handle_alg_args(self) -> list[list[str]]:
         args: list[list[str]] = []

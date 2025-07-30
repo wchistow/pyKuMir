@@ -115,6 +115,23 @@ def test_alg_with_result():
     vm.execute()
     assert print_mock.printed_text == 'тест'
 
+def test_alg_with_start_and_end_asserts():
+    bytecode = code2bc('''
+    алг нач
+        тест(1)
+    кон
+
+    алг тест(цел а)
+        дано а > 0
+        надо б = а + 1
+    нач
+        цел б := а + 1
+        вывод б
+    кон''')
+    vm = create_vm(*bytecode)
+    vm.execute()
+    assert print_mock.printed_text == '2'
+
 
 def test_call_undef_alg_error():
     with pytest.raises(RuntimeException):
