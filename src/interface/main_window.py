@@ -64,7 +64,7 @@ class MainWindow(QWidget):
         self.menu_bar.addMenu(self.file_menu)
 
         self.help_menu = QMenu('Помощь')
-        self.help_menu.addAction('Документация', self.docview.show)
+        self.help_menu.addAction('Документация', QKeySequence('F1'), self.docview.show)
         self.help_menu.addAction('О Qt', lambda: QMessageBox.aboutQt(self, 'О Qt'))
         self.help_menu.addAction('О программе', self.show_about)
         self.menu_bar.addMenu(self.help_menu)

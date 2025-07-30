@@ -47,7 +47,10 @@ class DocView(QWidget):
         self.view.anchorClicked.connect(self.update_selected_item)
 
         self.tree = QTreeWidget(self)
-        for f in _get_all_files(os.path.join(self.base_dir, 'docs', 'lang')):
+        for f in sorted(
+                _get_all_files(os.path.join(self.base_dir, 'docs', 'lang')),
+                key=lambda file: self.PRETTY_NAMES[file]
+        ):
             item = QTreeWidgetItem(self.tree)
             item.setText(0, self.PRETTY_NAMES[f])
             item.setData(1, 0, os.path.join(self.base_dir, 'docs', 'lang', f))
