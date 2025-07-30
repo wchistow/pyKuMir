@@ -25,7 +25,7 @@ def create_vm(bc, algs):
     return VM(bc, output_f=print_mock.print, input_f=input_mock.input, algs=algs)
 
 
-def setup_function(func):
+def setup_function(_):
     input_mock.entered_text = ''
     print_mock.printed_text = ''
 

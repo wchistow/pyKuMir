@@ -35,7 +35,7 @@ class Files(Actor):
 
     @staticmethod
     def _start_reading(args: list[KumirValue]) -> None:
-        args[0].value.seek(0, 0)
+        args[0].value.seek(0)
 
     @staticmethod
     def _is_end(args: list[KumirValue]) -> KumirValue:

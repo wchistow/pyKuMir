@@ -6,6 +6,7 @@ from typing import TypeAlias, Any, TextIO
 from .actors import actors
 from .actors.base import KumirFunc, KumirValue
 from .bytecode import Bytecode, BytecodeType
+from .constants import AlgsList
 from .exceptions import RuntimeException
 from .value import Value
 
@@ -18,15 +19,7 @@ class VM:
         bytecode: list[BytecodeType],
         output_f: Callable[[str], None],
         input_f: Callable[[], str],
-        algs: dict[
-            str,
-            tuple[
-                list[tuple[str, str, str]],
-                str,
-                list[list[BytecodeType], list[int]],
-            ],
-        ]
-        | None = None,
+        algs: AlgsList | None = None,
         work_dir: str = Path.home() / 'Kumir',
         cur_dir: str | None = None,
         cur_file: str | None = None,
@@ -236,6 +229,7 @@ class VM:
     def output(self, lineno: int, exprs_num: int) -> None:
         """
         Обрабатывает инструкцию OUTPUT
+        :param lineno: номер текущей строки
         :param exprs_num: количество выражений, которых нужно вывести (они загружаются из стека)
         """
         to_file: TextIO | None = None

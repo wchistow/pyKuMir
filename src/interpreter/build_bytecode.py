@@ -31,13 +31,11 @@ from .ast_classes import (
     Use,
 )
 from .bytecode import Bytecode, BytecodeType
+from .constants import AlgsList
 from .exceptions import RuntimeException
 from .value import Value
 
-
-def build_bytecode(
-    parsed_code: list,
-) -> tuple[list[BytecodeType], dict[str, list[list[BytecodeType], list[int]]]]:
+def build_bytecode(parsed_code: list) -> tuple[list[BytecodeType], AlgsList]:
     builder = BytecodeBuilder()
     return builder.build(parsed_code)
 
@@ -47,14 +45,7 @@ class BytecodeBuilder:
 
     def __init__(self) -> None:
         self.bytecode: list[BytecodeType] = []
-        self.algs: dict[
-            str,
-            tuple[
-                list[tuple[str, str, str]],
-                str,
-                list[list[BytecodeType], list[int]],
-            ],
-        ] = {}
+        self.algs: AlgsList = {}
         self.cur_tags: list[int] = []
         self.cur_alg: str | None = None
         self.cur_inst_n = 0

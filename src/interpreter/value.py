@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional, Union, TextIO
 
-Table = dict[Optional['Value']]
+Table = dict[int, Optional['Value']]
 
 
 @dataclass

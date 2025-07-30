@@ -19,7 +19,9 @@ def run(program_version: str):
 
         logging.info('Приложение запущено')
 
-        exit(app.exec())
+        code = app.exec()
+        logging.info(f'Приложение остановлено c кодом {code}')
+        exit(code)
     except Exception:
         err_msg = ''.join(format_exc())
         logging.critical('\n' + err_msg)
@@ -34,6 +36,5 @@ def run(program_version: str):
         msg.setStandardButtons(QMessageBox.StandardButton.Ok)
         msg.setFont(font)
         msg.exec()
+        logging.info('Приложение остановлено c кодом 1')
         exit(1)
-    finally:
-        logging.info('Приложение остановлено')
