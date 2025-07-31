@@ -781,13 +781,13 @@ def _get_priority_and_associative(op: Op) -> tuple[int, str]:
     elif op.op == 'не':
         return 1, 'left'
     elif op.op in ('+', '-'):
-        return 2, 'left'
-    elif op.op in ('*', '/'):
         return 3, 'left'
-    elif op.op == '**':
+    elif op.op in ('*', '/'):
         return 4, 'left'
-    elif op.op in ('>', '<', '=', '>=', '<=', '<>'):
+    elif op.op == '**':
         return 5, 'left'
+    elif op.op in ('>', '<', '=', '>=', '<=', '<>'):
+        return 2, 'left'
     elif op.op in ('или', 'и'):
         return 0, 'left'
     else:
