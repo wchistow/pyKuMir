@@ -1,28 +1,20 @@
 from .build_bytecode import build_bytecode
+from .constants import AlgsList
 from .parser import Parser
 
 from .bytecode import BytecodeType
 from .exceptions import SyntaxException, RuntimeException
 from .vm import VM
 
-__all__ = [
-    'build_bytecode',
-    'Parser',
-    'SyntaxException',
-    'RuntimeException',
-    'VM',
-    'pretty_print_bc',
-]
+__all__ = ('build_bytecode', 'Parser', 'SyntaxException', 'RuntimeException', 'VM', 'pretty_print_bc')
 
 
-def code2bc(
-    code: str,
-) -> tuple[list[BytecodeType], dict[str, list[BytecodeType, list[int]]]]:
+def code2bc(code: str) -> tuple[list[BytecodeType], AlgsList]:
     p = Parser(code)
     return build_bytecode(p.parse())
 
 
-def pretty_print_bc(bc: list[BytecodeType], algs: dict) -> None:
+def pretty_print_bc(bc: list[BytecodeType], algs: AlgsList) -> None:
     """
     Печатает переданный байт-код в формате:
     ```

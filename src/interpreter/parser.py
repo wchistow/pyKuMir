@@ -95,13 +95,6 @@ class Parser:
 
     def _parse(self) -> None:
         while True:
-            if self.envs and self.envs[-1] in (Env.MAIN, Env.ALG) and self.cur_token.value == 'кон':
-                if self.cur_end_assert:
-                    self.res.append(Assert(self.line, self.cur_end_assert))
-                    self.cur_end_assert.clear()
-                self.res.append(AlgEnd(self.line))
-                self.envs.pop()
-
             self._next_token()
 
             if self.envs:
@@ -192,8 +185,6 @@ class Parser:
 
         while self.cur_token.kind == 'NEWLINE':
             self._next_token()
-        if self.cur_token.value == 'нач':
-            self._next_token()
 
         self.res.append(
             AlgStart(
@@ -267,6 +258,12 @@ class Parser:
             self._handle_use()
         elif self.cur_token.kind == 'TYPE':  # объявление переменной(ых)
             self._handle_var_def()
+        elif self.cur_token.value == 'кон' and self.envs and self.envs[-1] in (Env.MAIN, Env.ALG):
+            if self.cur_end_assert:
+                self.res.append(Assert(self.line, self.cur_end_assert))
+                self.cur_end_assert.clear()
+            self.res.append(AlgEnd(self.line))
+            self.envs.pop()
         elif self.cur_token.value == 'вывод':
             self._handle_output()
         elif self.cur_token.value == 'ввод':
@@ -349,7 +346,22 @@ class Parser:
                 tables.append((names.pop(), indexes))
                 continue
             if self.cur_token.kind == 'NAME':
-                names.append(self.cur_token.value)
+                name = self.cur_token.value
+                self._next_token()
+                if self.cur_token.kind in ('EQ', 'ASSIGN'):
+                    if self.cur_token.kind == 'EQ':
+                        expr = self._parse_const_expr()
+                    else:
+                        self._next_token()
+                        expr = self._parse_expr()
+                    self._next_token()
+                    if self.cur_token.kind not in ('COMMA', 'NEWLINE'):
+                        raise SyntaxException(self.line, self.cur_token.value)
+                    self.res.append(StoreVar(self.line, typename, [name], expr))
+                    continue
+                else:
+                    names.append(name)
+                    continue
             self._next_token()
 
         if tables:
@@ -368,28 +380,29 @@ class Parser:
         if 'таб' in typename and not tables:
             raise SyntaxException(self.line, self.cur_token.value, 'нет границ')
 
-        if self.cur_token.kind == 'ASSIGN':
-            self._next_token()
-            expr = self._parse_expr()
-            if self.cur_token.kind != 'NEWLINE':
+        if names:
+            if self.cur_token.kind == 'ASSIGN':
+                self._next_token()
+                expr = self._parse_expr()
+                if self.cur_token.kind != 'NEWLINE':
+                    raise SyntaxException(self.line, self.cur_token.value)
+            elif self.cur_token.kind == 'EQ':
+                expr = self._parse_const_expr()
+                self._next_token()
+                if self.cur_token.kind != 'NEWLINE':
+                    raise SyntaxException(self.line, self.cur_token.value, 'это не константа')
+                self.res.append(StoreVar(self.line - 1, typename, names, expr))
+                return
+            elif self.cur_token.kind == 'NEWLINE':
+                self.res.append(StoreVar(self.line - 1, typename, names, None))
+                return
+            else:
                 raise SyntaxException(self.line, self.cur_token.value)
-        elif self.cur_token.kind == 'EQ':
-            expr = self._parse_const_expr()
-            self._next_token()
-            if self.cur_token.kind != 'NEWLINE':
-                raise SyntaxException(self.line, self.cur_token.value, 'это не константа')
+
+            if len(names) > 1 and expr:
+                raise SyntaxException(self.line, ':=', 'здесь не должно быть ":="')
+
             self.res.append(StoreVar(self.line - 1, typename, names, expr))
-            return
-        elif self.cur_token.kind == 'NEWLINE':
-            self.res.append(StoreVar(self.line - 1, typename, names, None))
-            return
-        else:
-            raise SyntaxException(self.line, self.cur_token.value)
-
-        if len(names) > 1 and expr:
-            raise SyntaxException(self.line, ':=', 'здесь не должно быть ":="')
-
-        self.res.append(StoreVar(self.line - 1, typename, names, expr))
 
     def _parse_table_def(self) -> list[tuple[Expr, Expr]]:
         self._next_token()
@@ -415,9 +428,8 @@ class Parser:
     def _handle_var_assign(self, name: str) -> None:
         self._next_token()
         expr = self._parse_expr()
-        if self.cur_token.kind != 'NEWLINE':
-            raise SyntaxException(self.line, self.cur_token.value)
         self.res.append(StoreVar(self.line - 1, None, [name], expr))
+        self._handle_statement()  # после присваивания может сразу идти следующая конструкция
 
     def _handle_table_assign(self, name: str) -> None:
         self._next_token()
@@ -605,8 +617,7 @@ class Parser:
     def _handle_call(self, name: str):
         call = self._parse_call(name)
 
-        if self.cur_token.kind != 'NEWLINE':
-            raise SyntaxException(self.line, self.cur_token.value)
+        self._handle_statement()  # после вызова может сразу идти следующая конструкция
 
         self.res.append(call)
 

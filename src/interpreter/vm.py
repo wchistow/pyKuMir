@@ -172,7 +172,7 @@ class VM:
         b = self.stack.pop()
         typename = a.typename
 
-        # операции над разными типами можно проводить, только если это цел или вещ
+        # операции над разными типами можно проводить, только если это `цел` и `вещ` или `лит` и `сим`
         if sorted((a.typename, b.typename)) == ['вещ', 'цел']:
             typename = 'вещ'
         elif sorted((a.typename, b.typename)) == ['лит', 'сим']:
@@ -252,7 +252,7 @@ class VM:
         :param lineno: номер текущей строки кода
         :param targets: список имён переменных, в которые необходимо записать ввод пользователя
         """
-        from_file: str | None = None
+        from_file: TextIO | None = None
 
         cur_target_i = 0
         while cur_target_i < len(targets):
@@ -580,7 +580,7 @@ class VM:
             res |= self.call_stack[-1]
         return res
 
-    def _get_extra_args(self, name: str) -> dict[str, ...]:
+    def _get_extra_args(self, name: str) -> dict[str, str]:
         extra_args = {}
         if name in ('РАБОЧИЙ КАТАЛОГ', 'создать каталог', 'полный путь'):
             extra_args['work_dir'] = self.work_dir
@@ -601,7 +601,7 @@ def _check_str_index(lineno: int, index: Value, string: str) -> None:
     _check_index_type(lineno, index)
     val = index.value
     if val > len(string):
-        raise RuntimeException(lineno, 'индекс символа больше длины строки')
+        raise RuntimeException(lineno, f'индекс символа ({val}) больше длины строки ({len(string)})')
     if val < 0:
         raise RuntimeException(lineno, 'отрицательный индекс')
 

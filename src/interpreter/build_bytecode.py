@@ -187,7 +187,7 @@ class BytecodeBuilder:
                 self.cur_ns.extend(self._expr_bc(stmt.lineno, arg))
 
         if not res_var_setted:
-            self.cur_ns.append((stmt.lineno, Bytecode.SET_RES_VAR, (alg[2],)))
+            self.cur_ns.append((stmt.lineno, Bytecode.SET_RES_VAR, ('знач',)))
 
         self.cur_ns.append((stmt.lineno, Bytecode.CALL, (stmt.alg_name, len(stmt.args))))
         self.cur_inst_n += 2
@@ -329,7 +329,7 @@ class BytecodeBuilder:
 
     def _expr_bc(self, lineno: int, expr: Expr) -> list[BytecodeType]:
         """
-        Превращает обратную польскую запись вида `(2, 3, Op(op='+'))`
+        Превращает обратную польскую запись вида `2, 3, Op(op='+')`
         в набор команд байт-кода вида `LOAD 2, LOAD 3, BIN_OP +`.
         """
         res: list[BytecodeType] = []
@@ -339,28 +339,37 @@ class BytecodeBuilder:
                     res.append((lineno, Bytecode.UNARY_OP, (v.op,)))
                 else:
                     res.append((lineno, Bytecode.BIN_OP, (v.op,)))
+                self.cur_inst_n += 1
             elif isinstance(v, Call):
+                last_inst_n = self.cur_inst_n
                 self._handle_call(v)
-                self.cur_inst_n -= 1
+                bc = []
+                for _ in range(self.cur_inst_n - last_inst_n):
+                    try:
+                        bc.append(self.cur_ns.pop())
+                    except IndexError:
+                        break
+                res.extend(bc[::-1])
             elif isinstance(v, GetItem):
-                self.cur_ns.append((v.lineno, Bytecode.LOAD_NAME, (v.table_name,)))
+                res.append((v.lineno, Bytecode.LOAD_NAME, (v.table_name,)))
                 self.cur_inst_n += 1
                 for index in v.indexes:
-                    self.cur_ns.extend(self._expr_bc(v.lineno, index))
-                    self.cur_ns.append((v.lineno, Bytecode.GET_ITEM, ()))
+                    res.extend(self._expr_bc(v.lineno, index))
+                    res.append((v.lineno, Bytecode.GET_ITEM, ()))
                     self.cur_inst_n += 1
             elif isinstance(v, Slice):
-                self.cur_ns.append((v.lineno, Bytecode.LOAD_NAME, (v.name,)))
+                res.append((v.lineno, Bytecode.LOAD_NAME, (v.name,)))
                 self.cur_inst_n += 1
                 for index in v.indexes:
                     self.cur_ns.extend(self._expr_bc(v.lineno, index))
-                self.cur_ns.append((v.lineno, Bytecode.MAKE_SLICE, (v.name,)))
+                res.append((v.lineno, Bytecode.MAKE_SLICE, (v.name,)))
                 self.cur_inst_n += 1
             elif v.typename == 'get-name':
                 res.append((lineno, Bytecode.LOAD_NAME, (v.value,)))
+                self.cur_inst_n += 1
             elif isinstance(v, Value):
                 res.append((lineno, Bytecode.LOAD_CONST, (v,)))
-            self.cur_inst_n += 1
+                self.cur_inst_n += 1
         return res
 
 
