@@ -3,8 +3,12 @@ import os
 import sys
 
 if __name__ == '__main__':
-    file = 'cli.py' if len(sys.argv) > 1 else 'main.py'
+    if len(sys.argv) == 2 and sys.argv[1].endswith('.kum') and not (sys.stdin and sys.stdin.isatty()):
+        file = 'main.py'
+    elif len(sys.argv) >= 2:
+        file = 'cli.py'
+    else:
+        file = 'main.py'
     command = f'/usr/bin/python3 /usr/lib/pykumir/src/{file} ' + ' '.join(sys.argv[1:])
 
     os.system(command)
-

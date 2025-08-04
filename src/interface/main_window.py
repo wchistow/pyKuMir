@@ -1,7 +1,7 @@
 import os.path
 from pathlib import Path
 from threading import Thread
-from sys import getdefaultencoding
+from sys import argv, getdefaultencoding
 from platform import python_version, python_implementation, platform
 
 from PyQt6.QtGui import QKeySequence
@@ -39,11 +39,6 @@ class MainWindow(QWidget):
         super().__init__(parent)
         self.ABOUT = f'pyKuMir v{program_version}\n{ABOUT}'
 
-        self.work_dir = Path.home() / 'Kumir'
-        if not os.path.exists(self.work_dir):
-            os.mkdir(self.work_dir)
-
-        self.cur_file: str | None = None
         self.unsaved_changes = False
 
         self.resize(800, 600)
@@ -55,7 +50,7 @@ class MainWindow(QWidget):
         self.file_menu = QMenu('Программа')
         self.file_menu.addAction('Новая программа', QKeySequence('Ctrl+N'), self.new_program)
         self.file_menu.addSeparator()
-        self.file_menu.addAction('Загрузить', QKeySequence('Ctrl+O'), self.open_file)
+        self.file_menu.addAction('Загрузить', QKeySequence('Ctrl+O'), self.ask_open_file)
         self.file_menu.addSeparator()
         self.file_menu.addAction('Сохранить', QKeySequence('Ctrl+S'), self.save_file)
         self.file_menu.addAction('Сохранить как', self.save_file_as)
@@ -91,6 +86,16 @@ class MainWindow(QWidget):
         self.grid.addWidget(self.code_and_console, 1, 0, 7, 1)
 
         self.setMinimumSize(600, 500)
+
+        self.cur_file: str | None = None
+        self.work_dir = Path.home() / 'Kumir'
+        if len(argv) == 2:
+            self.cur_file = argv[1]
+            self.open_file(self.cur_file)
+            self.work_dir = os.path.dirname(self.cur_file)
+        else:
+            if not os.path.exists(self.work_dir):
+                os.mkdir(self.work_dir)
 
         self.update_file()
 
@@ -162,12 +167,17 @@ class MainWindow(QWidget):
 
         self.update_file()
 
-    def open_file(self):
+    def ask_open_file(self):
         if self.unsaved_changes:
             self.ask_to_save_or_close('Открытие другого файла')
 
         new_file = QFileDialog.getOpenFileName(self, 'Загрузить файл', '', 'Файлы КуМир (*.kum);;Все файлы (*)')
-        self.cur_file = new_file[0]
+
+        if new_file[0]:
+            self.open_file(new_file[0])
+
+    def open_file(self, new_file: str):
+        self.cur_file = new_file
         with open(self.cur_file, encoding='utf-8') as f:
             self.codeinput.setPlainText(f.read())
             self.codeinput.highlight_syntax()

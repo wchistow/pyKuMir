@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+
+  <mime-type type="application/pykumir.program">
+      <comment>pyKumir Program</comment>
+      <comment xml:lang="ru">Программа на языке Кумир для программы pyKumir</comment>
+      <glob pattern="*.kum"/>
+  </mime-type>
+
+</mime-info>

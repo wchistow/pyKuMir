@@ -48,6 +48,11 @@ copy_desktop() {
   sudo chmod +x /usr/share/applications/pykumir.desktop || exit 1
 }
 
+copy_mime() {
+  sudo cp ./linux/pykumir-mimetypes.xml /usr/share/mime/packages/ || exit 1
+  sudo chmod +x /usr/share/mime/packages/pykumir-mimetypes.xml || exit 1
+}
+
 printf "Проверка версии Python... "
 check_python_version
 echo OK
@@ -67,6 +72,10 @@ echo OK
 
 printf "Копирование файла .desktop... "
 copy_desktop
+echo OK
+
+printf "Создание типа файла... "
+copy_mime
 echo OK
 
 echo "Установка успешно завершена"

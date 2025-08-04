@@ -2,7 +2,8 @@
 [Desktop Entry]
 Name=pyKuMir
 Type=Application
-Exec=/usr/bin/pykumir
+Exec=/usr/bin/pykumir %u
 Terminal=false
 Categories=Education;
 Keywords=кумир;pykumir;
+MimeType=application/pykumir.program
