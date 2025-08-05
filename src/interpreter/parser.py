@@ -339,6 +339,7 @@ class Parser:
 
         names: list[str] = []
         tables: list[tuple[str, list[tuple[Expr, Expr]]]] = []
+        names_n = 0
 
         while self.cur_token.kind in ('NAME', 'COMMA', 'TABLE_BRACKET'):
             if self.cur_token.value == '[':
@@ -347,17 +348,23 @@ class Parser:
                 continue
             if self.cur_token.kind == 'NAME':
                 name = self.cur_token.value
+                names_n += 1
                 self._next_token()
                 if self.cur_token.kind in ('EQ', 'ASSIGN'):
+                    if names_n > 1:
+                        raise SyntaxException(self.line, ':=', 'здесь не должно быть ":="')
+
+                    names_n -= 1
                     if self.cur_token.kind == 'EQ':
                         expr = self._parse_const_expr()
+                        self._next_token()
                     else:
                         self._next_token()
                         expr = self._parse_expr()
-                    self._next_token()
                     if self.cur_token.kind not in ('COMMA', 'NEWLINE'):
                         raise SyntaxException(self.line, self.cur_token.value)
-                    self.res.append(StoreVar(self.line, typename, [name], expr))
+                    self.res.append(StoreVar(self.line - 1 if self.cur_token.kind == 'NEWLINE' else self.line,
+                                             typename, [name], expr))
                     continue
                 else:
                     names.append(name)
@@ -381,12 +388,12 @@ class Parser:
             raise SyntaxException(self.line, self.cur_token.value, 'нет границ')
 
         if names:
-            if self.cur_token.kind == 'ASSIGN':
+            if self.cur_token.kind == 'ASSIGN' and len(names) == 1:
                 self._next_token()
                 expr = self._parse_expr()
                 if self.cur_token.kind != 'NEWLINE':
                     raise SyntaxException(self.line, self.cur_token.value)
-            elif self.cur_token.kind == 'EQ':
+            elif self.cur_token.kind == 'EQ' and len(names) == 1:
                 expr = self._parse_const_expr()
                 self._next_token()
                 if self.cur_token.kind != 'NEWLINE':
@@ -398,9 +405,6 @@ class Parser:
                 return
             else:
                 raise SyntaxException(self.line, self.cur_token.value)
-
-            if len(names) > 1 and expr:
-                raise SyntaxException(self.line, ':=', 'здесь не должно быть ":="')
 
             self.res.append(StoreVar(self.line - 1, typename, names, expr))
 

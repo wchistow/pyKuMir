@@ -493,10 +493,11 @@ class VM:
             raise RuntimeException(lineno, f'нельзя "сим := {value.typename}"')
 
     def slice(self, lineno: int) -> None:
+        var = self.stack.pop()
+
         end = self.stack.pop()
         start = self.stack.pop()
 
-        var = self.stack.pop()
         if var.typename != 'лит':
             raise RuntimeException(lineno, 'лишние индексы')
 
