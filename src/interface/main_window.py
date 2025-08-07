@@ -112,6 +112,7 @@ class MainWindow(QWidget):
         run_button = QToolButton()
         run_button.setText('запустить')
         run_button.clicked.connect(self.run_code)
+        run_button.setShortcut(QKeySequence('Shift+F9'))
         self.buttons.addWidget(run_button)
 
     def closeEvent(self, event):
