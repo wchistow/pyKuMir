@@ -3,10 +3,10 @@ from .constants import AlgsList
 from .parser import Parser
 
 from .bytecode import BytecodeType
-from .exceptions import SyntaxException, RuntimeException
+from .exceptions import KumirException, SyntaxException, RuntimeException
 from .vm import VM
 
-__all__ = ('build_bytecode', 'Parser', 'SyntaxException', 'RuntimeException', 'VM', 'pretty_print_bc')
+__all__ = ('build_bytecode', 'Parser', 'KumirException', 'SyntaxException', 'RuntimeException', 'VM', 'pretty_print_bc')
 
 
 def code2bc(code: str) -> tuple[list[BytecodeType], AlgsList]:

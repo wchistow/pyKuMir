@@ -4,21 +4,14 @@ from PyQt6.QtCore import QEvent, Qt, pyqtSignal
 from PyQt6.QtGui import QTextCursor
 from PyQt6.QtWidgets import QTextEdit
 
-CSS = """<style>
-.sys {
-    font-style: italic;
-    color: grey;
-}
-</style>"""
-
 
 class Console(QTextEdit):
     output = pyqtSignal(str)
     output_sys = pyqtSignal(str)
+    output_err = pyqtSignal(str)
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        self.insertHtml(CSS)
         self.setReadOnly(True)
 
         self.input_completed = False
@@ -27,6 +20,7 @@ class Console(QTextEdit):
 
         self.output.connect(self._output)
         self.output_sys.connect(self._output_sys)
+        self.output_err.connect(self._output_err)
 
     def keyPressEvent(self, e):
         super().keyPressEvent(e)
@@ -43,10 +37,15 @@ class Console(QTextEdit):
         cursor.movePosition(QTextCursor.MoveOperation.End)
         self.setTextCursor(cursor)
 
+    def _output_err(self, text: str) -> None:
+        self._cursor_to_end()
+        html_text = text.replace('\n', '<br />')
+        self.insertHtml(f'<span style="color: red;">{html_text}</span>')
+
     def _output_sys(self, text: str) -> None:
         self._cursor_to_end()
         html_text = text.replace('\n', '<br />')
-        self.insertHtml(f'<span class="sys">{html_text}</span>')
+        self.insertHtml(f'<span style="font-style: italic; color: grey;">{html_text}</span>')
 
     def _output(self, text: str) -> None:
         self._cursor_to_end()

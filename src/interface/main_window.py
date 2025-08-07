@@ -16,7 +16,7 @@ from PyQt6.QtWidgets import (
     QToolButton,
     QFileDialog,
 )
-from PyQt6.QtCore import Qt, QT_VERSION_STR, PYQT_VERSION_STR
+from PyQt6.QtCore import Qt, QT_VERSION_STR, PYQT_VERSION_STR, pyqtSignal
 
 from .codeinput import CodeInput
 from .console import Console
@@ -35,6 +35,8 @@ ABOUT = f"""
 
 
 class MainWindow(QWidget):
+    on_error = pyqtSignal(Exception)
+
     def __init__(self, program_version: str, parent=None):
         super().__init__(parent)
         self.ABOUT = f'pyKuMir v{program_version}\n{ABOUT}'
@@ -77,7 +79,8 @@ class MainWindow(QWidget):
         self.code_and_console.addWidget(self.codeinput)
         self.code_and_console.addWidget(self.console)
 
-        self.runner = Runner(self.console)
+        self.on_error.connect(self._on_error)
+        self.runner = Runner(self.console, self.on_error)
         self.runner_thread: Thread | None = None
 
         self.grid = QGridLayout(self)
@@ -100,6 +103,10 @@ class MainWindow(QWidget):
         self.update_file()
 
         self.setLayout(self.grid)
+
+    def _on_error(self, e: Exception) -> None:
+        self.console.output_err.emit(f'ОШИБКА ВЫПОЛНЕНИЯ: {e.args[0]}')
+        self.codeinput.error_on(e.args[1], e.args[0])
 
     def add_tool_buttons(self):
         run_button = QToolButton()

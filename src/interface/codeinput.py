@@ -1,4 +1,3 @@
-from PyQt6.QtGui import QFontMetricsF
 from PyQt6.QtWidgets import QTextEdit
 
 from .lexer import highlight_text
@@ -13,9 +12,26 @@ class CodeInput(QTextEdit):
         cursor.setPosition(10)
         self.setTextCursor(cursor)
 
-        font = self.font()
-        font_metrics = QFontMetricsF(font)
-        self.setTabStopDistance(2 * font_metrics.averageCharWidth())
+        self.setTabStopDistance(2 * self.fontMetrics().averageCharWidth())
+
+    def error_on(self, lineno: int, message: str):
+        cursor = self.textCursor()
+
+        text = self.toPlainText()
+
+        char_format = self.currentCharFormat()
+        char_format.setBackground(0xff0000)
+        cursor.movePosition(cursor.MoveOperation.Start)
+        line = 0
+        for char in text:
+            cursor.movePosition(cursor.MoveOperation.Right, cursor.MoveMode.KeepAnchor)
+            if char == '\n':
+                line += 1
+                cursor.movePosition(cursor.MoveOperation.Right)
+                continue
+            if line == lineno:
+                cursor.setCharFormat(char_format)
+            cursor.movePosition(cursor.MoveOperation.Right)
 
     def clear(self):
         self.setPlainText('алг\nнач\n  \nкон')
