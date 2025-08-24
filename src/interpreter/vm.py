@@ -83,7 +83,7 @@ class VM:
             Bytecode.GET_ITEM: lambda inst: self.get_item(inst[0]),
             Bytecode.SET_ITEM: lambda inst: self.set_item(inst[0], *inst[2]),
             Bytecode.MAKE_SLICE: lambda inst: self.slice(inst[0]),
-            Bytecode.USE: lambda inst: self.use(inst[2][0]),
+            Bytecode.USE: lambda inst: self.use(inst[0], inst[2][0]),
         }
 
         self.INSTS_WITHOUT_INCREASE_COUNTER = {
@@ -110,7 +110,7 @@ class VM:
             if self.stopped:
                 break
 
-    def store_var(self, lineno: int, typename: str | None, names: tuple[str]) -> None:
+    def store_var(self, lineno: int, typename: str | None, names: tuple[str, ...]) -> None:
         """
         Обрабатывает инструкцию STORE
         :param lineno: номер текущей строки
@@ -511,7 +511,9 @@ class VM:
 
         self.stack.append(Value('лит', res))
 
-    def use(self, actor_name: str) -> None:
+    def use(self, lineno: int, actor_name: str) -> None:
+        if actor_name not in actors.keys():
+            raise RuntimeException(lineno, f'нет такого исполнителя')
         self._load_actors_vars(actors[actor_name].vars)
         self._load_actors_algs(actors[actor_name].funcs)
 
@@ -636,12 +638,12 @@ def _convert_string_to_type(lineno: int, string: str, var_type: str) -> Value:
             raise RuntimeException(lineno, 'ошибка ввода вещественного числа') from None
     elif var_type == 'лог':
         return Value('лог', string)
-    elif var_type == 'лит':
-        return Value('лит', string)
     elif var_type == 'сим':
         if len(string) > 1:
             raise RuntimeException(lineno, 'ошибка ввода: введено лишнее')
         return Value('сим', string)
+    else:
+        return Value('лит', string)
 
 
 def _find_var_in_namespace(lineno: int, name: str, namespace: Namespace) -> Value | None:

@@ -5,14 +5,12 @@
 """
 from typing import TypeAlias
 
-from .bytecode import BytecodeType
-
 AlgsList: TypeAlias = dict[
     str,
     tuple[
         list[tuple[str, str, str]],
         str,
-        list[list[BytecodeType], list[int]]
+        list[list]
     ]
 ]
 

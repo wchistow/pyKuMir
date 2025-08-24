@@ -135,6 +135,4 @@ def test_alg_with_start_and_end_asserts():
 
 def test_call_undef_alg_error():
     with pytest.raises(RuntimeException):
-        bytecode = code2bc('алг\nнач\nтест\nкон')
-        vm = create_vm(*bytecode)
-        vm.execute()
+        code2bc('алг\nнач\nтест\nкон')

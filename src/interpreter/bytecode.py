@@ -1,6 +1,5 @@
 from enum import auto, Enum
-
-from .value import Value
+from typing import TypeAlias
 
 
 class Bytecode(Enum):
@@ -26,4 +25,4 @@ class Bytecode(Enum):
     USE = auto()
 
 
-BytecodeType = tuple[int, Bytecode, tuple[Value | None | tuple[Value], ...]]
+BytecodeType: TypeAlias = tuple[int, Bytecode, tuple]
